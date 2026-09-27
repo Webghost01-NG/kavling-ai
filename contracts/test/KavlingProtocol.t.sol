@@ -33,7 +33,7 @@ contract KavlingProtocolTest is Test {
         usdt.faucet(investor2, 100_000 * 1e18);
         vm.deal(investor1, 100 ether);
         vm.deal(investor2, 100 ether);
-        vm.deal(admin, 10 ether);
+        vm.deal(admin, 50 ether);
     }
 
     function _signAppraisal(
@@ -48,6 +48,7 @@ contract KavlingProtocolTest is Test {
                 appraisal.pricePerFraction,
                 appraisal.annualYieldBps,
                 appraisal.timestamp,
+                appraisal.nonce,
                 appraisal.deadline
             )
         );
@@ -77,6 +78,7 @@ contract KavlingProtocolTest is Test {
             pricePerFraction: 50 * 1e18,       // $50 per fraction
             annualYieldBps: 980,               // 9.80% APY
             timestamp: block.timestamp,
+            nonce: 1,
             deadline: block.timestamp + 1 hours
         });
 
@@ -100,7 +102,9 @@ contract KavlingProtocolTest is Test {
             propertyId,
             address(registry),
             address(usdt),
-            10_000 * 1e18
+            10_000 * 1e18,
+            0, // Instant Active for base tests
+            30
         );
         registry.linkVault(propertyId, address(vault));
         vm.stopPrank();
@@ -114,6 +118,199 @@ contract KavlingProtocolTest is Test {
         assertEq(prop.pricePerFraction, 50 * 1e18);
         assertEq(prop.annualYieldBps, 980);
         assertTrue(prop.isActive);
+        assertEq(registry.propertyNonces(propertyId), 1);
+    }
+
+    function test_ReplayAttack_RevertsOnOldOrInvalidNonce() public {
+        _setupPropertyAndVault();
+
+        // Attempting to reuse nonce 1 should revert with InvalidNonce
+        KavlingRegistry.Appraisal memory replayedAppraisal = KavlingRegistry.Appraisal({
+            propertyId: propertyId,
+            valuationUSD: 520_000 * 1e18,
+            pricePerFraction: 52 * 1e18,
+            annualYieldBps: 1020,
+            timestamp: block.timestamp + 100,
+            nonce: 1, // Replaying old nonce!
+            deadline: block.timestamp + 2 hours
+        });
+
+        bytes memory sig = _signAppraisal(replayedAppraisal, appraiserPrivateKey);
+
+        vm.expectRevert(KavlingRegistry.InvalidNonce.selector);
+        registry.updateAppraisal(replayedAppraisal, sig);
+
+        // Updating with correct sequential nonce (nonce 2) succeeds!
+        KavlingRegistry.Appraisal memory validAppraisal = KavlingRegistry.Appraisal({
+            propertyId: propertyId,
+            valuationUSD: 520_000 * 1e18,
+            pricePerFraction: 52 * 1e18,
+            annualYieldBps: 1020,
+            timestamp: block.timestamp + 100,
+            nonce: 2, // Correct sequential nonce
+            deadline: block.timestamp + 2 hours
+        });
+
+        bytes memory validSig = _signAppraisal(validAppraisal, appraiserPrivateKey);
+        registry.updateAppraisal(validAppraisal, validSig);
+
+        assertEq(registry.propertyNonces(propertyId), 2);
+        assertEq(registry.getProperty(propertyId).valuationUSD, 520_000 * 1e18);
+    }
+
+    function test_StaleTimestamp_Reverts() public {
+        _setupPropertyAndVault();
+
+        // Appraisal with stale timestamp <= lastAppraisalTimestamp
+        KavlingRegistry.Appraisal memory staleAppraisal = KavlingRegistry.Appraisal({
+            propertyId: propertyId,
+            valuationUSD: 530_000 * 1e18,
+            pricePerFraction: 53 * 1e18,
+            annualYieldBps: 1000,
+            timestamp: block.timestamp, // Stale!
+            nonce: 2,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes memory sig = _signAppraisal(staleAppraisal, appraiserPrivateKey);
+
+        vm.expectRevert(KavlingRegistry.StaleAppraisal.selector);
+        registry.updateAppraisal(staleAppraisal, sig);
+    }
+
+    function test_SoftCapEscrow_FinalizeSuccess_ReleasesCapital() public {
+        bytes32 escrowPropId = keccak256("ESCROW-PROP-01");
+
+        KavlingRegistry.Appraisal memory appraisal = KavlingRegistry.Appraisal({
+            propertyId: escrowPropId,
+            valuationUSD: 100_000 * 1e18,
+            pricePerFraction: 10 * 1e18,
+            annualYieldBps: 850,
+            timestamp: block.timestamp,
+            nonce: 1,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes memory sig = _signAppraisal(appraisal, appraiserPrivateKey);
+
+        vm.startPrank(admin);
+        registry.registerPropertyWithAppraisal(
+            escrowPropId,
+            "Jogja Heritage Hotel",
+            "Yogyakarta",
+            "HGB-99234-DIY",
+            "ipfs://QmJogjaHeritageHotel",
+            10_000 * 1e18,
+            appraisal,
+            sig
+        );
+
+        // Vault with $5,000 minFundingGoalUSD and 14 days deadline
+        KavlingPropertyVault escrowVault = new KavlingPropertyVault(
+            "Jogja Heritage Fractions",
+            "KVL-JOGJA",
+            escrowPropId,
+            address(registry),
+            address(usdt),
+            10_000 * 1e18,
+            5_000 * 1e18,
+            14
+        );
+        registry.linkVault(escrowPropId, address(escrowVault));
+        vm.stopPrank();
+
+        assertTrue(escrowVault.state() == KavlingPropertyVault.VaultState.Funding);
+
+        // Investor1 buys 600 fractions ($6,000) -> Exceeds $5,000 goal
+        vm.startPrank(investor1);
+        usdt.approve(address(escrowVault), type(uint256).max);
+        escrowVault.buyWithUSDT(600 * 1e18);
+        vm.stopPrank();
+
+        // Funds are held in escrow vault
+        assertEq(usdt.balanceOf(address(escrowVault)), 6_000 * 1e18);
+
+        // Finalize funding
+        uint256 adminUsdtBefore = usdt.balanceOf(admin);
+        escrowVault.finalizeFunding();
+
+        // Escrow funds swept to admin (property issuer) and state is Active
+        assertTrue(escrowVault.state() == KavlingPropertyVault.VaultState.Active);
+        assertEq(usdt.balanceOf(admin) - adminUsdtBefore, 6_000 * 1e18);
+        assertEq(usdt.balanceOf(address(escrowVault)), 0);
+    }
+
+    function test_SoftCapEscrow_ExpiredDeadline_EnablesRefunds() public {
+        bytes32 escrowPropId = keccak256("ESCROW-PROP-FAIL");
+
+        KavlingRegistry.Appraisal memory appraisal = KavlingRegistry.Appraisal({
+            propertyId: escrowPropId,
+            valuationUSD: 100_000 * 1e18,
+            pricePerFraction: 10 * 1e18,
+            annualYieldBps: 850,
+            timestamp: block.timestamp,
+            nonce: 1,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes memory sig = _signAppraisal(appraisal, appraiserPrivateKey);
+
+        vm.startPrank(admin);
+        registry.registerPropertyWithAppraisal(
+            escrowPropId,
+            "Bandung Creative Hub",
+            "Bandung",
+            "SHM-88312-BDG",
+            "ipfs://QmBandungHub",
+            10_000 * 1e18,
+            appraisal,
+            sig
+        );
+
+        // Vault with $50,000 minFundingGoalUSD and 7 days deadline
+        KavlingPropertyVault escrowVault = new KavlingPropertyVault(
+            "Bandung Hub Fractions",
+            "KVL-BDG",
+            escrowPropId,
+            address(registry),
+            address(usdt),
+            10_000 * 1e18,
+            50_000 * 1e18,
+            7
+        );
+        registry.linkVault(escrowPropId, address(escrowVault));
+        vm.stopPrank();
+
+        // Investor1 buys 100 fractions ($1,000)
+        vm.startPrank(investor1);
+        usdt.approve(address(escrowVault), type(uint256).max);
+        escrowVault.buyWithUSDT(100 * 1e18);
+        vm.stopPrank();
+
+        // Investor2 buys 5 fractions with BNB ($50)
+        vm.prank(investor2);
+        escrowVault.buyWithBNB{value: 1 ether}(5 * 1e18);
+
+        // Advance time past 7-day deadline
+        vm.warp(block.timestamp + 8 days);
+
+        // Enable refunds
+        escrowVault.enableRefunds();
+        assertTrue(escrowVault.state() == KavlingPropertyVault.VaultState.Refundable);
+
+        // Investor 1 reclaims USDT refund
+        uint256 inv1USDTBefore = usdt.balanceOf(investor1);
+        vm.prank(investor1);
+        escrowVault.claimRefund();
+        assertEq(usdt.balanceOf(investor1) - inv1USDTBefore, 1_000 * 1e18);
+        assertEq(escrowVault.balanceOf(investor1), 0);
+
+        // Investor 2 reclaims BNB refund
+        uint256 inv2BNBBefore = investor2.balance;
+        vm.prank(investor2);
+        escrowVault.claimRefund();
+        assertGt(investor2.balance, inv2BNBBefore);
+        assertEq(escrowVault.balanceOf(investor2), 0);
     }
 
     function test_BuyWithNativeBNB_AndRefundExcess() public {
@@ -161,8 +358,6 @@ contract KavlingProtocolTest is Test {
         vm.stopPrank();
 
         // VERIFY: Neither call underflows, both claim exactly what they are owed!
-        // Inv 1 was 100% owner for period 1 ($1000), and 60% owner for period 2 ($300) = $1,300 total
-        // Inv 2 was 0% owner for period 1 ($0), and 40% owner for period 2 ($200) = $200 total
         assertEq(vault.calculateClaimableYield(investor1), 1300 * 1e18);
         assertEq(vault.calculateClaimableYield(investor2), 200 * 1e18);
 
@@ -176,6 +371,29 @@ contract KavlingProtocolTest is Test {
         vm.prank(investor2);
         vault.claimRentalYield();
         assertEq(usdt.balanceOf(investor2) - inv2USDTBefore, 200 * 1e18);
+    }
+
+    function test_DualCurrencyYield_DepositAndClaimBNB() public {
+        _setupPropertyAndVault();
+
+        // Investor 1 buys 100 fractions
+        vm.startPrank(investor1);
+        usdt.approve(address(vault), type(uint256).max);
+        vault.buyWithUSDT(100 * 1e18);
+        vm.stopPrank();
+
+        // Operator streams 5 BNB rental yield
+        vm.prank(admin);
+        vault.depositRentalYieldBNB{value: 5 ether}();
+
+        assertEq(vault.calculateClaimableYieldBNB(investor1), 5 ether);
+
+        uint256 balanceBefore = investor1.balance;
+        vm.prank(investor1);
+        vault.claimRentalYieldBNB();
+
+        assertEq(investor1.balance - balanceBefore, 5 ether);
+        assertEq(vault.calculateClaimableYieldBNB(investor1), 0);
     }
 
     function test_ComplianceGate_Enforced() public {
