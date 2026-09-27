@@ -216,4 +216,4 @@ git submodule update --init --recursive
 ---
 
 ## 📜 License
-MIT License. Created for the **Indonesia Web3 Hackathon 2026** on BNB Chain.
+MIT License.

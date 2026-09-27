@@ -8,7 +8,7 @@ import "../src/MockUSDT.sol";
 
 contract DeployKavlingScript is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envOr("PRIVATE_KEY", uint256(0xA11CE));
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address aiAppraiser = vm.envOr("AI_APPRAISER_ADDRESS", vm.addr(deployerPrivateKey));
 
         vm.startBroadcast(deployerPrivateKey);

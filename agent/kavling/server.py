@@ -2,10 +2,11 @@
 Kavling AI - FastAPI REST Server & Autonomous Oracle Gateway
 """
 import time
+from threading import Lock
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from eth_account import Account
 from web3 import Web3
 
@@ -23,8 +24,8 @@ app = FastAPI(
 # Enable CORS for browser frontend dApp
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -33,24 +34,45 @@ class AppraisalRequest(BaseModel):
     property_id: str = Field(default="0x4b41564c494e472d42414c492d30310000000000000000000000000000000000")
     city: str = Field(default="Bali")
     district: str = Field(default="Canggu")
-    land_area_m2: float = Field(default=500.0)
-    building_area_m2: float = Field(default=350.0)
-    building_age_years: int = Field(default=2)
+    land_area_m2: float = Field(default=500.0, gt=0, le=100_000)
+    building_area_m2: float = Field(default=350.0, gt=0, le=100_000)
+    building_age_years: int = Field(default=2, ge=0, le=200)
     building_quality: str = Field(default="Luxury")
     zoning: str = Field(default="Pariwisata")
     title: str = Field(default="SHM")
     elevation_masl: float = Field(default=18.0)
     distance_to_coast_km: float = Field(default=1.2)
     structural_audit_grade: str = Field(default="A")
-    total_fractions: int = Field(default=15_000)
-    nonce: int = Field(default=1)
+    total_fractions: int = Field(default=15_000, gt=0, le=10**18)
+    nonce: int = Field(default=1, gt=0)
     chain_id: Optional[int] = None
     verifying_contract: Optional[str] = None
+
+    @field_validator("property_id")
+    @classmethod
+    def validate_property_id(cls, value: str) -> str:
+        if len(value) != 66 or not value.startswith("0x"):
+            raise ValueError("property_id must be a 32-byte hex value")
+        try:
+            bytes.fromhex(value[2:])
+        except ValueError as exc:
+            raise ValueError("property_id must be a 32-byte hex value") from exc
+        return value
 
 class ComplianceRequest(BaseModel):
     investor_address: str
     country_code: str = "ID"
     national_id_hash: str # SHA256(NIK KTP)
+
+
+_last_seen_nonces: Dict[str, int] = {}
+_nonce_lock = Lock()
+
+
+def _agent_account() -> Account:
+    if not settings.AGENT_PRIVATE_KEY:
+        raise RuntimeError("AGENT_PRIVATE_KEY is not configured")
+    return Account.from_key(settings.AGENT_PRIVATE_KEY)
 
 # Pre-seeded Indonesian Curated Properties
 SAMPLE_PROPERTIES = [
@@ -115,7 +137,7 @@ SAMPLE_PROPERTIES = [
 
 @app.get("/")
 def root():
-    agent_account = Account.from_key(settings.AGENT_PRIVATE_KEY)
+    agent_account = _agent_account()
     return {
         "protocol": "Kavling AI",
         "description": "Autonomous Real Estate Tokenization Protocol on BNB Chain",
@@ -130,7 +152,7 @@ def health():
     return {
         "status": "healthy",
         "timestamp": int(time.time()),
-        "agent": Account.from_key(settings.AGENT_PRIVATE_KEY).address,
+        "agent": _agent_account().address,
         "chainId": settings.CHAIN_ID
     }
 
@@ -147,6 +169,14 @@ def appraise_property(req: AppraisalRequest):
     Computes mathematical valuation and signs EIP-712 appraisal with nonce replay prevention.
     """
     try:
+        with _nonce_lock:
+            previous_nonce = _last_seen_nonces.get(req.property_id, 0)
+            if req.nonce <= previous_nonce:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"nonce must be greater than the last accepted nonce ({previous_nonce})"
+                )
+
         appraisal_result = calculate_appraisal(
             property_id_hex=req.property_id,
             city=req.city,
@@ -173,29 +203,42 @@ def appraise_property(req: AppraisalRequest):
             verifying_contract=req.verifying_contract or settings.REGISTRY_ADDRESS
         )
 
+        with _nonce_lock:
+            _last_seen_nonces[req.property_id] = req.nonce
+
         return {
             "success": True,
             "appraisal": appraisal_result,
             "eip712_proof": signed_proof
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/oracle/telemetry")
 def get_telemetry():
     """
-    Simulated & live RPC telemetry for BNB Chain hackathon demonstration.
+    Reports live RPC telemetry and explicitly marks unavailable data as degraded.
     """
-    agent_account = Account.from_key(settings.AGENT_PRIVATE_KEY)
+    agent_account = _agent_account()
+    provider = Web3(Web3.HTTPProvider(settings.RPC_URL, request_kwargs={"timeout": 4}))
+    rpc_connected = provider.is_connected()
+    latest_block = None
+    gas_price_gwei = None
+    if rpc_connected:
+        latest_block = provider.eth.block_number
+        gas_price_gwei = round(float(provider.eth.gas_price) / 1e9, 4)
     return {
         "chainId": settings.CHAIN_ID,
         "network": "BNB Smart Chain Testnet" if settings.CHAIN_ID == 97 else "opBNB Testnet",
         "appraiserAgent": agent_account.address,
-        "bnbPriceUSD": 600.0,
-        "gasPriceGwei": 3.0,
-        "blockTimeSeconds": 3.0,
+        "rpcConnected": rpc_connected,
+        "latestBlock": latest_block,
+        "gasPriceGwei": gas_price_gwei,
+        "dataSource": "BNB JSON-RPC" if rpc_connected else "RPC unavailable",
         "activeCurrencies": ["USDT", "tBNB"],
-        "oracleStatus": "SYNCHRONIZED",
+        "oracleStatus": "SYNCHRONIZED" if rpc_connected else "DEGRADED",
         "lastValuationTimestamp": int(time.time()),
         "securityAudits": {
             "eip712ReplayProtection": "ENABLED (Monotonic Nonces)",
@@ -207,16 +250,18 @@ def get_telemetry():
 @app.post("/api/compliance/verify")
 def verify_investor(req: ComplianceRequest):
     """
-    Simulates Indonesian Bappebti/OJK compliant KYC verification.
+    Performs address-format validation only; it is not a KYC/AML service.
     """
     is_valid = Web3.is_address(req.investor_address)
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid Ethereum/BSC address")
     
     return {
-        "verified": True,
+        "verified": False,
+        "status": "address_format_only",
         "investor": req.investor_address,
         "jurisdiction": req.country_code,
-        "complianceTier": "Accredited SEA RWA Investor",
+        "complianceTier": None,
+        "message": "No KYC/AML provider is connected; this endpoint only validates address syntax.",
         "timestamp": int(time.time())
     }

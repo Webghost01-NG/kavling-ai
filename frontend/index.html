@@ -1,260 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kavling AI | Autonomous Real Estate Tokenization on BNB Chain</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Kavling is an explainable property valuation and fractional vault prototype." />
+    <title>Kavling — Property intelligence with an evidence trail</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="wordmark" href="#top" aria-label="Kavling home"><span class="wordmark-mark">K</span><span>Kavling</span></a>
+        <div class="sidebar-label">Workspace</div>
+        <nav class="primary-nav" aria-label="Primary navigation">
+          <a class="nav-link active" href="#overview"><span>◈</span>Overview</a>
+          <a class="nav-link" href="#valuation"><span>⌁</span>Valuation studio</a>
+          <a class="nav-link" href="#vaults"><span>▣</span>Vault mechanics</a>
+          <a class="nav-link" href="#proof"><span>⌘</span>Proof inspector</a>
+        </nav>
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-note"><span class="eyebrow">Prototype environment</span><strong>Illustrative data only</strong><p>No property, yield, or contract shown here is a live investment offer.</p></div>
+        <a class="github-link" href="https://github.com/Webghost01-NG/kavling-ai" target="_blank" rel="noreferrer">View source <span>↗</span></a>
+      </aside>
 
-  <!-- Navigation Header -->
-  <header>
-    <div class="logo-container">
-      <div class="logo-badge">KVL</div>
-      <div class="brand-title">Kavling AI</div>
+      <main class="main-content" id="top">
+        <header class="topbar"><div class="breadcrumb"><span class="live-dot"></span> Kavling intelligence layer <span class="slash">/</span> Overview</div><div class="topbar-actions"><span class="network-pill" id="network-status">LOCAL DEMO</span><button class="text-button" id="lang-toggle" type="button">Bahasa</button><button class="button button-dark" id="wallet-btn" type="button">Connect wallet</button></div></header>
+
+        <section class="hero-section" id="overview"><div class="hero-copy"><span class="eyebrow">Property intelligence · Southeast Asia</span><h1>Price real-world property with an <em>evidence trail.</em></h1><p>Kavling combines an explainable automated valuation model with zoning, title, and climate-risk factors. The output can be attested with EIP-712 before an on-chain vault uses it.</p><div class="hero-actions"><a class="button button-accent" href="#valuation">Open valuation studio <span>↗</span></a><a class="quiet-link" href="#proof">Inspect proof format <span>↓</span></a></div></div><div class="hero-aside"><div class="signal-card"><span class="signal-icon">✦</span><div><span class="eyebrow">Model posture</span><strong>Explainable AVM</strong><small>Deterministic inputs · no black-box score</small></div></div><div class="hero-rule"></div><div class="hero-aside-row"><span>Network</span><strong>BNB testnet-ready</strong></div><div class="hero-aside-row"><span>Data mode</span><strong>Illustrative / local</strong></div></div></section>
+
+        <section class="metric-grid" aria-label="Prototype metrics"><article class="metric-card"><span class="eyebrow">Model coverage</span><strong>04</strong><span>regional baselines</span></article><article class="metric-card"><span class="eyebrow">Output format</span><strong>EIP-712</strong><span>typed appraisal proof</span></article><article class="metric-card"><span class="eyebrow">Vault state</span><strong>LOCAL</strong><span>contracts not connected</span></article><article class="metric-card accent-metric"><span class="eyebrow">Risk factors</span><strong>03</strong><span>zone · title · climate</span></article></section>
+
+        <section class="content-grid" id="valuation"><div class="panel valuation-panel"><div class="panel-heading"><div><span class="eyebrow">01 / Appraisal engine</span><h2>Valuation studio</h2></div><span class="panel-status">Runs locally</span></div><p class="panel-intro">Change the assumptions and see exactly which factors move the estimate. This is an analytical prototype, not a certified appraisal.</p><form id="appraisal-form" class="valuation-form"><label>Region<select id="inp-city"><option value="Bali">Bali · Canggu</option><option value="Jakarta">Jakarta · SCBD</option><option value="Yogyakarta">Yogyakarta · Malioboro</option><option value="Bandung">Bandung · Dago</option></select></label><div class="form-row"><label>Land area <span>m²</span><input id="inp-land" type="number" value="500" min="1" max="100000" /></label><label>Building area <span>m²</span><input id="inp-build" type="number" value="350" min="1" max="100000" /></label></div><div class="form-row"><label>Zoning<select id="inp-zoning"><option value="Pariwisata">Pariwisata</option><option value="Komersial">Komersial</option><option value="Residensial">Residensial</option><option value="Pertanian">Pertanian</option></select></label><label>Title type<select id="inp-title"><option value="SHM">SHM</option><option value="HGB">HGB</option><option value="Hak Pakai">Hak Pakai</option></select></label></div><button class="button button-accent full-button" id="calc-submit-btn" type="submit">Run valuation <span>↗</span></button></form><div class="estimate-grid"><div><span>Estimated value</span><strong id="res-val">—</strong></div><div><span>Per fraction</span><strong id="res-fraction">—</strong></div><div><span>Forecast yield</span><strong id="res-yield">—</strong></div><div><span>Resilience</span><strong id="res-resilience">—</strong></div></div><div class="source-note" id="appraisal-source">Waiting for a local appraisal run.</div></div>
+
+          <div class="panel listings-panel" id="vaults"><div class="panel-heading"><div><span class="eyebrow">02 / Scenario book</span><h2>Illustrative vaults</h2></div><span class="panel-status muted">Not live listings</span></div><div class="listing-list" id="property-list"></div><div class="disclaimer">Figures are seeded demo scenarios for evaluating the product flow. They are not verified properties or investment opportunities.</div></div></section>
+
+        <section class="lower-grid" id="proof"><div class="panel proof-panel"><div class="panel-heading"><div><span class="eyebrow">03 / Attestation layer</span><h2>Proof inspector</h2></div><span class="panel-status" id="proof-status">Unsigned estimate</span></div><p class="panel-intro">When the agent service is configured, the same appraisal is signed as typed data. A signature authenticates the payload—not the truth of the underlying property.</p><pre class="proof-code" id="eip-proof-box">Run a valuation to inspect the appraisal payload.</pre></div><div class="panel lifecycle-panel"><div class="panel-heading"><div><span class="eyebrow">04 / Contract pathway</span><h2>Vault lifecycle</h2></div><span class="panel-status muted">Walkthrough</span></div><div class="timeline" id="lifecycle"><div class="timeline-item"><span>01</span><div><strong>Appraise</strong><small>Model produces explainable assumptions</small></div></div><div class="timeline-item"><span>02</span><div><strong>Attest</strong><small>Agent signs EIP-712 payload</small></div></div><div class="timeline-item"><span>03</span><div><strong>Fund</strong><small>Vault holds deposits until soft-cap</small></div></div><div class="timeline-item"><span>04</span><div><strong>Distribute</strong><small>Yield accounting tracks token holders</small></div></div></div><button class="button button-outline full-button" id="judge-sim-btn" type="button">Preview lifecycle <span>↗</span></button><p class="simulation-status" id="judge-status" aria-live="polite"></p></div></section>
+
+        <footer class="footer"><span>© 2026 Kavling prototype</span><span>Model-driven property infrastructure</span><a href="https://github.com/Webghost01-NG/kavling-ai" target="_blank" rel="noreferrer">GitHub ↗</a></footer>
+      </main>
     </div>
-    <div class="nav-actions">
-      <div class="pill-badge bnb">
-        <span class="pulse-dot"></span>
-        BNB Chain (BSC Testnet 97)
-      </div>
-      <button class="lang-btn" id="lang-toggle">Bahasa Indonesia</button>
-      <button class="btn btn-primary" id="wallet-btn">Connect Wallet</button>
-    </div>
-  </header>
-
-  <div class="container">
-    <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-subtitle" id="hero-sub">Indonesia Web3 Hackathon 2026 • BNB Chain</div>
-      <h1 class="hero-title" id="hero-title">Autonomous Real Estate Tokenization Protocol</h1>
-      <p class="hero-desc" id="hero-desc">
-        Empowering Indonesian real estate with autonomous AI valuation agents, BMKG seismic risk scoring, and zero-underflow fractional yield on BNB Chain.
-      </p>
-
-      <!-- Protocol Stats Grid -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label" id="lbl-vol">Total Volume Appraised</div>
-          <div class="stat-value">$2,400,000</div>
-          <div class="stat-sub">Verified by AI Appraiser</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label" id="lbl-inv">Verified Investors</div>
-          <div class="stat-value">1,280+</div>
-          <div class="stat-sub">Bappebti / OJK Sandbox Ready</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label" id="lbl-yield">Avg Rental APY</div>
-          <div class="stat-value" style="color:#F0B90B;">9.57%</div>
-          <div class="stat-sub">Dual-Rail: USDT & tBNB</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label" id="lbl-sec">Escrow Protocol</div>
-          <div class="stat-value" style="color:#34D399;">100% Active</div>
-          <div class="stat-sub">Soft-Cap & Refund Safeguards</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Bento Grid Content -->
-    <div class="bento-grid">
-      
-      <!-- Card 1: Curated Properties Marketplace (Col 8) -->
-      <div class="bento-card col-8">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title" id="market-title">Curated Indonesian Real Estate</h2>
-            <p class="card-desc" id="market-desc">Institutional-grade villas, commercial towers, and cultural heritage assets on BNB Chain.</p>
-          </div>
-          <span class="pill-badge">3 Genesis Parcels</span>
-        </div>
-        <div class="property-list" id="property-list">
-          <!-- Dynamic Property Cards Rendered by app.js -->
-        </div>
-      </div>
-
-      <!-- Card 2: Interactive AI Valuation Studio (Col 4) -->
-      <div class="bento-card col-4">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title" id="studio-title">AI Valuation Studio</h2>
-            <p class="card-desc" id="studio-desc">Hedonic regression & BMKG seismic fault line scoring.</p>
-          </div>
-        </div>
-
-        <form id="appraisal-form">
-          <div class="form-group">
-            <label>City / Archipelago</label>
-            <select id="inp-city">
-              <option value="Bali">Bali (Badung / Canggu)</option>
-              <option value="Jakarta">Jakarta (SCBD / South)</option>
-              <option value="Yogyakarta">Yogyakarta (Malioboro)</option>
-              <option value="Bandung">Bandung (Dago)</option>
-            </select>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Land Area (m²)</label>
-              <input type="number" id="inp-land" value="500" min="50" max="10000" />
-            </div>
-            <div class="form-group">
-              <label>Building (m²)</label>
-              <input type="number" id="inp-build" value="350" min="50" max="5000" />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Zoning Code</label>
-              <select id="inp-zoning">
-                <option value="Pariwisata">Pariwisata (Tourism)</option>
-                <option value="Komersial">Komersial (CBD)</option>
-                <option value="Residensial">Residensial</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Legal Title</label>
-              <select id="inp-title">
-                <option value="SHM">SHM (Freehold)</option>
-                <option value="HGB">HGB (Commercial)</option>
-                <option value="Hak Pakai">Hak Pakai</option>
-              </select>
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:8px;" id="calc-submit-btn">
-            Run AI Appraisal
-          </button>
-        </form>
-
-        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border-subtle);">
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-            <span style="color:#9CA3AF; font-size:0.8rem;">ESTIMATED VALUE</span>
-            <strong id="res-val" style="color:#FFF;">$750,000</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-            <span style="color:#9CA3AF; font-size:0.8rem;">FRACTION PRICE</span>
-            <strong id="res-fraction" style="color:#F0B90B;">$50.00</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-            <span style="color:#9CA3AF; font-size:0.8rem;">EXPECTED APY</span>
-            <strong id="res-yield" style="color:#34D399;">9.80%</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-            <span style="color:#9CA3AF; font-size:0.8rem;">FAULT ZONE</span>
-            <span id="res-fault" style="color:#D1D5DB; font-size:0.8rem;">Sunda Megathrust Arc</span>
-          </div>
-          <div style="display:flex; justify-content:space-between;">
-            <span style="color:#9CA3AF; font-size:0.8rem;">RESILIENCE SCORE</span>
-            <span id="res-resilience" style="color:#34D399; font-weight:600; font-size:0.8rem;">95.2 / 100</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 3: EIP-712 Cryptographic Proof Inspector (Col 6) -->
-      <div class="bento-card col-6">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title" id="proof-title">EIP-712 Cryptographic Proof Inspector</h2>
-            <p class="card-desc" id="proof-desc">On-chain verifiable valuation digest signed by the Kavling AI oracle agent.</p>
-          </div>
-          <span class="pill-badge" style="background:rgba(6,182,212,0.15); border-color:rgba(6,182,212,0.3); color:#06B6D4;">
-            Monotonic Nonce Protected
-          </span>
-        </div>
-        <div class="code-box" id="eip-proof-box">
-          Loading cryptographic proof...
-        </div>
-      </div>
-
-      <!-- Card 4: Investor Portfolio & Dual Yield (Col 6) -->
-      <div class="bento-card col-6">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title" id="portfolio-title">Investor Portfolio & Dual Yield</h2>
-            <p class="card-desc" id="portfolio-desc">Claim streaming rental earnings in USDT or native tBNB with zero underflow risk.</p>
-          </div>
-          <span class="pill-badge" id="user-addr-display">0x7099...79C8</span>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
-          <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:16px;">
-            <div style="font-size:0.75rem; color:#9CA3AF;">ACTIVE FRACTIONS</div>
-            <div id="user-fractions" style="font-size:1.4rem; font-weight:800; color:#FFF; margin-top:4px;">50 KVL-BALI</div>
-            <div style="font-size:0.75rem; color:#34D399; margin-top:2px;">Equity: $2,500 USD</div>
-          </div>
-          <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:16px;">
-            <div style="font-size:0.75rem; color:#9CA3AF;">PENDING YIELD (DUAL-RAIL)</div>
-            <div id="pending-usdt" style="font-size:1.1rem; font-weight:700; color:#34D399; margin-top:4px;">$125.00 USDT</div>
-            <div id="pending-bnb" style="font-size:1.1rem; font-weight:700; color:var(--bnb-gold); margin-top:2px;">0.208 tBNB</div>
-          </div>
-        </div>
-
-        <div style="display:flex; gap:12px;">
-          <button class="btn btn-primary" id="claim-usdt-btn" style="flex:1;">Claim USDT Yield</button>
-          <button class="btn" id="claim-bnb-btn" style="flex:1; border-color:var(--bnb-gold); color:var(--bnb-gold);">Claim tBNB Yield</button>
-        </div>
-      </div>
-
-      <!-- Card 5: Interactive Hackathon Judge Sandbox (Col 12) -->
-      <div class="bento-card col-12">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title" id="judge-title">Interactive Hackathon Judge Sandbox</h2>
-            <p class="card-desc" id="judge-desc">Simulate the complete end-to-end tokenization and yield lifecycle in 5 seconds.</p>
-          </div>
-          <button class="btn btn-primary" id="judge-sim-btn">Execute 1-Click Judge Simulation</button>
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
-          <div class="step-item">
-            <div class="step-number">1</div>
-            <div class="step-details">
-              <h4>Investor KYC Compliance</h4>
-              <p>Verified against Indonesian regulatory sandbox rules.</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-number">2</div>
-            <div class="step-details">
-              <h4>AI Appraisal & BMKG Risk</h4>
-              <p>Autonomous valuation signed via EIP-712 with nonce replay lock.</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-number">3</div>
-            <div class="step-details">
-              <h4>Soft-Cap Escrow Minting</h4>
-              <p>Protected capital round with automatic refund rights.</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-number">4</div>
-            <div class="step-details">
-              <h4>Dual-Rail Tenant Yield</h4>
-              <p>Real rental income streamed in USDT and native tBNB.</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-number">5</div>
-            <div class="step-details">
-              <h4>Zero-Underflow Settlement</h4>
-              <p>Formal mathematical guarantee against balance underflows.</p>
-            </div>
-          </div>
-        </div>
-
-        <div id="judge-status" style="display:none; margin-top:20px; padding:12px 18px; border-radius:var(--radius-sm); background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#34D399; font-size:0.9rem; font-weight:600; text-align:center;">
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-</body>
+    <script src="app.js"></script>
+  </body>
 </html>

@@ -36,7 +36,8 @@ def test_appraise_endpoint():
         "zoning": "Pariwisata",
         "title": "SHM",
         "total_fractions": 15000,
-        "nonce": 1
+        "nonce": 1,
+        "verifying_contract": "0x1234567890123456789012345678901234567890"
     }
     response = client.post("/api/appraise", json=payload)
     assert response.status_code == 200
@@ -61,4 +62,5 @@ def test_compliance_verify():
     }
     response = client.post("/api/compliance/verify", json=payload)
     assert response.status_code == 200
-    assert response.json()["verified"] is True
+    assert response.json()["verified"] is False
+    assert response.json()["status"] == "address_format_only"

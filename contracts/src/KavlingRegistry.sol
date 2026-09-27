@@ -88,7 +88,7 @@ contract KavlingRegistry is Ownable, EIP712 {
     {
         require(_aiAppraiserAgent != address(0), "Invalid agent address");
         aiAppraiserAgent = _aiAppraiserAgent;
-        complianceEnforced = false; // Permissive by default for hackathon usability
+        complianceEnforced = false; // Deployments should enable this only with a real verification process.
     }
 
     function setAIAppraiser(address _newAgent) external onlyOwner {
