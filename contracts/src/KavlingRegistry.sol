@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 /**
  * @title KavlingRegistry
  * @notice Central registry for Indonesian & SEA Real Estate Assets tokenized on BNB Chain.
- * @dev Validates AI Agent valuations using EIP-712 cryptographically signed appraisals.
+ * @dev Validates AI Agent valuations using EIP-712 cryptographically signed appraisals and manages investor compliance.
  */
 contract KavlingRegistry is Ownable, EIP712 {
     using ECDSA for bytes32;
@@ -26,8 +26,8 @@ contract KavlingRegistry is Ownable, EIP712 {
         bytes32 propertyId;
         string name;              // e.g. "Villa Canggu Sanctuary"
         string city;              // e.g. "Bali", "Jakarta", "Yogyakarta"
-        string legalDeedHash;     // SHM / HGB land title hash
-        string ipfsMetadata;      // IPFS URI containing images, comps, and full audit
+        string legalDeedHash;     // SHM / HGB land title certificate hash
+        string ipfsMetadata;      // IPFS URI containing images, comps, and structural audit
         uint256 totalFractions;   // Total fractional tokens issued
         uint256 valuationUSD;
         uint256 pricePerFraction;
@@ -41,10 +41,15 @@ contract KavlingRegistry is Ownable, EIP712 {
     );
 
     address public aiAppraiserAgent;
+    bool public complianceEnforced; // When true, only verified investors can purchase fractions
+
     mapping(bytes32 => Property) public properties;
+    mapping(address => bool) public isInvestorVerified;
     bytes32[] public propertyIds;
 
     event AIAppraiserUpdated(address indexed previousAgent, address indexed newAgent);
+    event ComplianceEnforcementToggled(bool isEnforced);
+    event InvestorVerificationUpdated(address indexed investor, bool status);
     event PropertyRegistered(
         bytes32 indexed propertyId,
         string name,
@@ -62,24 +67,50 @@ contract KavlingRegistry is Ownable, EIP712 {
         uint256 timestamp
     );
     event VaultLinked(bytes32 indexed propertyId, address indexed vaultAddress);
+    event PropertyStatusToggled(bytes32 indexed propertyId, bool isActive);
 
     error InvalidSigner();
     error SignatureExpired();
     error PropertyAlreadyExists();
     error PropertyNotFound();
     error Unauthorized();
+    error InvestorNotVerified();
 
     constructor(address _aiAppraiserAgent) 
         Ownable(msg.sender) 
         EIP712("KavlingRegistry", "1.0.0") 
     {
+        require(_aiAppraiserAgent != address(0), "Invalid agent address");
         aiAppraiserAgent = _aiAppraiserAgent;
+        complianceEnforced = false; // Permissive by default for hackathon usability
     }
 
     function setAIAppraiser(address _newAgent) external onlyOwner {
         require(_newAgent != address(0), "Invalid agent address");
         emit AIAppraiserUpdated(aiAppraiserAgent, _newAgent);
         aiAppraiserAgent = _newAgent;
+    }
+
+    function setComplianceEnforced(bool _enforced) external onlyOwner {
+        complianceEnforced = _enforced;
+        emit ComplianceEnforcementToggled(_enforced);
+    }
+
+    function setInvestorVerification(address investor, bool status) external onlyOwner {
+        isInvestorVerified[investor] = status;
+        emit InvestorVerificationUpdated(investor, status);
+    }
+
+    function batchSetInvestorVerification(address[] calldata investors, bool status) external onlyOwner {
+        for (uint256 i = 0; i < investors.length; i++) {
+            isInvestorVerified[investors[i]] = status;
+            emit InvestorVerificationUpdated(investors[i], status);
+        }
+    }
+
+    function verifyInvestor(address investor) external view returns (bool) {
+        if (!complianceEnforced) return true;
+        return isInvestorVerified[investor];
     }
 
     function _verifyAppraisalSignature(
@@ -105,7 +136,7 @@ contract KavlingRegistry is Ownable, EIP712 {
     }
 
     /**
-     * @notice Registers a new property with an AI-signed appraisal.
+     * @notice Registers a new property parcel on BNB Chain with verified AI appraisal.
      */
     function registerPropertyWithAppraisal(
         bytes32 propertyId,
@@ -155,6 +186,12 @@ contract KavlingRegistry is Ownable, EIP712 {
         if (properties[propertyId].valuationUSD == 0) revert PropertyNotFound();
         properties[propertyId].vaultAddress = vault;
         emit VaultLinked(propertyId, vault);
+    }
+
+    function setPropertyActive(bytes32 propertyId, bool active) external onlyOwner {
+        if (properties[propertyId].valuationUSD == 0) revert PropertyNotFound();
+        properties[propertyId].isActive = active;
+        emit PropertyStatusToggled(propertyId, active);
     }
 
     /**
