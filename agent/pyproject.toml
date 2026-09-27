@@ -1,0 +1,26 @@
+[project]
+name = "kavling-agent"
+version = "1.0.0"
+description = "Autonomous AI Real Estate Valuation & EIP-712 Oracle Agent for BNB Chain"
+authors = [{ name = "Kavling AI Team", email = "dev@kavling.ai" }]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.31.0",
+    "web3>=7.0.0",
+    "eth-account>=0.13.0",
+    "pydantic>=2.9.0",
+    "python-dotenv>=1.0.0",
+    "cryptography>=43.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.3.0",
+    "httpx>=0.27.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
