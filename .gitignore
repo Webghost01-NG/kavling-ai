@@ -3,15 +3,23 @@ node_modules/
 .pnp
 .pnp.js
 
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Testing & Coverage
 coverage/
 .nyc_output
 
-# Next.js / Build
-.next/
-out/
-build/
+# Build artifacts
 dist/
+build/
+out/
 
 # Foundry / Solidity
 contracts/cache/
