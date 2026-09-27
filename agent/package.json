@@ -1,12 +1,11 @@
 {
   "name": "kavling-ai-agent",
   "version": "1.0.0",
-  "type": "module",
   "description": "Kavling AI Autonomous Valuation Agent and EIP-712 Signer Service",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js",
-    "test:appraise": "node test-agent.js"
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
