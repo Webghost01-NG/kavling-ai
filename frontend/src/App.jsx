@@ -43,9 +43,12 @@ export default function App() {
   const t = translations[lang];
 
   // Handler when user buys fractions
-  const handleBuyFractions = (propertyId, amountFractions, txHash) => {
+  const handleBuyFractions = (propertyId, amountFractions, txHash, paymentMethod = "usdt") => {
     const targetProp = properties.find((p) => p.id === propertyId);
     if (!targetProp) return;
+
+    const costUSD = amountFractions * targetProp.pricePerFractionUSD;
+    const bnbPrice = 600;
 
     // Deduct available
     setProperties((prev) =>
@@ -81,11 +84,21 @@ export default function App() {
       ];
     });
 
-    // Deduct wallet USDT
-    setWallet((prev) => ({
-      ...prev,
-      usdtBalance: Math.max(0, prev.usdtBalance - amountFractions * targetProp.pricePerFractionUSD)
-    }));
+    // Deduct wallet balance based on payment method
+    setWallet((prev) => {
+      if (paymentMethod === "bnb") {
+        const costBNB = costUSD / bnbPrice;
+        return {
+          ...prev,
+          tBnbBalance: Math.max(0, prev.tBnbBalance - costBNB)
+        };
+      } else {
+        return {
+          ...prev,
+          usdtBalance: Math.max(0, prev.usdtBalance - costUSD)
+        };
+      }
+    });
   };
 
   // Handler when user claims rental yield

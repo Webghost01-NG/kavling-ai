@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { MapPin, ShieldCheck, TrendingUp, Coins, FileText, CheckCircle2, ChevronRight, X } from "lucide-react";
+import { MapPin, ShieldCheck, TrendingUp, Coins, FileText, CheckCircle2, ChevronRight, X, Zap } from "lucide-react";
 
 export default function PropertyMarketplace({ properties, t, onBuyFractions, wallet }) {
   const [selectedCity, setSelectedCity] = useState("all");
   const [selectedPropForBuy, setSelectedPropForBuy] = useState(null);
   const [buyAmountFractions, setBuyAmountFractions] = useState("1");
+  const [paymentMethod, setPaymentMethod] = useState("usdt"); // "usdt" or "bnb"
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txSuccessHash, setTxSuccessHash] = useState(null);
 
@@ -12,6 +13,8 @@ export default function PropertyMarketplace({ properties, t, onBuyFractions, wal
     if (selectedCity === "all") return true;
     return p.city.toLowerCase() === selectedCity.toLowerCase();
   });
+
+  const bnbPrice = 600; // $600 USD per BNB
 
   const handleBuy = async (e) => {
     e.preventDefault();
@@ -23,7 +26,7 @@ export default function PropertyMarketplace({ properties, t, onBuyFractions, wal
     await new Promise((res) => setTimeout(res, 1200));
 
     const mockHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-    onBuyFractions(selectedPropForBuy.id, parseFloat(buyAmountFractions) || 1, mockHash);
+    onBuyFractions(selectedPropForBuy.id, parseFloat(buyAmountFractions) || 1, mockHash, paymentMethod);
 
     setTxSuccessHash(mockHash);
     setIsSubmitting(false);
@@ -227,9 +230,39 @@ export default function PropertyMarketplace({ properties, t, onBuyFractions, wal
 
               {!txSuccessHash ? (
                 <form onSubmit={handleBuy} className="space-y-4 pt-2">
+                  {/* Payment Method Selector */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-slate-300 font-medium">Select Payment Currency</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("usdt")}
+                        className={`p-2.5 rounded-xl border text-xs font-mono flex items-center justify-center gap-2 transition-all ${
+                          paymentMethod === "usdt"
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold"
+                            : "bg-black/30 border-white/5 text-slate-400"
+                        }`}
+                      >
+                        <span>💵 USDT Stablecoin</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("bnb")}
+                        className={`p-2.5 rounded-xl border text-xs font-mono flex items-center justify-center gap-2 transition-all ${
+                          paymentMethod === "bnb"
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold"
+                            : "bg-black/30 border-white/5 text-slate-400"
+                        }`}
+                      >
+                        <span>🟡 Native tBNB</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <label className="text-xs text-slate-300 font-medium flex justify-between">
-                      <span>Fractions to Buy (Min: 0.1)</span>
+                      <span>Fractions to Buy (Min: 0.01)</span>
                       <span className="text-slate-400 font-mono">
                         Available: {selectedPropForBuy.availableFractions}
                       </span>
@@ -237,8 +270,8 @@ export default function PropertyMarketplace({ properties, t, onBuyFractions, wal
                     <div className="relative">
                       <input
                         type="number"
-                        min="0.1"
-                        step="0.1"
+                        min="0.01"
+                        step="0.01"
                         max={selectedPropForBuy.availableFractions}
                         value={buyAmountFractions}
                         onChange={(e) => setBuyAmountFractions(e.target.value)}
@@ -252,29 +285,37 @@ export default function PropertyMarketplace({ properties, t, onBuyFractions, wal
                   </div>
 
                   {/* Pricing Breakdown */}
-                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 font-mono text-xs space-y-1.5">
-                    <div className="flex justify-between text-slate-400">
-                      <span>Price Per Fraction:</span>
-                      <span className="text-white">${selectedPropForBuy.pricePerFractionUSD} USDT</span>
-                    </div>
-                    <div className="flex justify-between text-slate-400">
-                      <span>Total Payment Required:</span>
-                      <span className="text-emerald-400 font-bold">
-                        ${((parseFloat(buyAmountFractions) || 0) * selectedPropForBuy.pricePerFractionUSD).toFixed(2)} USDT
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-slate-400 pt-1 border-t border-white/5">
-                      <span>Estimated Monthly Rental:</span>
-                      <span className="text-amber-400">
-                        ~${(((parseFloat(buyAmountFractions) || 0) * selectedPropForBuy.pricePerFractionUSD * 0.10) / 12).toFixed(2)} / month
-                      </span>
-                    </div>
-                  </div>
+                  {(() => {
+                    const frac = parseFloat(buyAmountFractions) || 0;
+                    const totalUSD = frac * selectedPropForBuy.pricePerFractionUSD;
+                    const totalBNB = (totalUSD / bnbPrice).toFixed(4);
+
+                    return (
+                      <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 font-mono text-xs space-y-1.5">
+                        <div className="flex justify-between text-slate-400">
+                          <span>Price Per Fraction:</span>
+                          <span className="text-white">${selectedPropForBuy.pricePerFractionUSD} USD</span>
+                        </div>
+                        <div className="flex justify-between text-slate-400">
+                          <span>Total Payment Required:</span>
+                          <span className={paymentMethod === "bnb" ? "text-amber-300 font-bold" : "text-emerald-400 font-bold"}>
+                            {paymentMethod === "bnb" ? `${totalBNB} tBNB (~$${totalUSD.toFixed(2)})` : `$${totalUSD.toFixed(2)} USDT`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-400 pt-1 border-t border-white/5">
+                          <span>Estimated Monthly Rental:</span>
+                          <span className="text-amber-400">
+                            ~${((totalUSD * 0.10) / 12).toFixed(2)} / month
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-50 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20"
                   >
                     {isSubmitting ? (
                       <span className="flex items-center gap-2">
@@ -282,7 +323,7 @@ export default function PropertyMarketplace({ properties, t, onBuyFractions, wal
                         Confirming on BNB Chain...
                       </span>
                     ) : (
-                      <span>Confirm & Deposit USDT</span>
+                      <span>Confirm & Deposit {paymentMethod === "bnb" ? "tBNB" : "USDT"}</span>
                     )}
                   </button>
                 </form>
