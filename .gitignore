@@ -1,0 +1,35 @@
+# Node & Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing & Coverage
+coverage/
+.nyc_output
+
+# Next.js / Build
+.next/
+out/
+build/
+dist/
+
+# Foundry / Solidity
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# Environment & Secrets
+.env
+.env*.local
+.env.production
+*.pem
+
+# IDEs & System
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/
+.idea/
