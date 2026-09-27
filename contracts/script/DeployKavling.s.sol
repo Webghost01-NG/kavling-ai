@@ -30,6 +30,7 @@ contract DeployKavlingScript is Script {
             pricePerFraction: 50 * 1e18,       // $50 per fraction
             annualYieldBps: 980,               // 9.80% APY
             timestamp: block.timestamp,
+            nonce: 1,
             deadline: block.timestamp + 365 days
         });
 
@@ -42,6 +43,7 @@ contract DeployKavlingScript is Script {
                 appraisal.pricePerFraction,
                 appraisal.annualYieldBps,
                 appraisal.timestamp,
+                appraisal.nonce,
                 appraisal.deadline
             )
         );
@@ -71,14 +73,16 @@ contract DeployKavlingScript is Script {
             sig
         );
 
-        // 4. Deploy Vault for Canggu Villa
+        // 4. Deploy Vault for Canggu Villa with Escrow Protection
         KavlingPropertyVault vault = new KavlingPropertyVault(
             "Kavling Bali Canggu Villa",
             "KVL-CANGGU",
             propertyId,
             address(registry),
             address(usdt),
-            15_000 * 1e18
+            15_000 * 1e18,
+            300_000 * 1e18, // $300,000 Soft-Cap
+            30              // 30 days
         );
         console.log("KavlingPropertyVault (Canggu) deployed to:", address(vault));
 

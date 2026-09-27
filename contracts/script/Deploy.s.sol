@@ -28,14 +28,16 @@ contract DeployKavlingProtocol is Script {
         // 3. Register initial Genesis property: Villa Canggu Bali
         bytes32 baliPropId = keccak256("VILLA-CANGGU-BALI-01");
         
-        // 4. Deploy first KavlingPropertyVault
+        // 4. Deploy first KavlingPropertyVault with Escrow Soft-Cap
         KavlingPropertyVault baliVault = new KavlingPropertyVault(
             "Kavling Villa Canggu",
             "KVL-BALI",
             baliPropId,
             address(registry),
             address(usdt),
-            15_000 * 1e18
+            15_000 * 1e18,
+            250_000 * 1e18, // $250k Soft-Cap
+            30              // 30 days funding round
         );
         console.log("KavlingPropertyVault (Bali) deployed to:", address(baliVault));
 
