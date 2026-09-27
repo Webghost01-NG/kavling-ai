@@ -8,8 +8,9 @@
 [![Pytest](https://img.shields.io/badge/Pytest-14%2F14%20Passed-10B981?style=for-the-badge)](https://pytest.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
-> **Autonomous Real Estate Tokenization on BNB Chain — Demarcating prime Southeast Asian physical properties into cryptographically verified, yield-bearing micro-fractions from as low as \$5.**  
-> *Official Submission for the Indonesia Web3 Hackathon 2026 (BNB Chain × Binance Academy × Coinvestasi × Dev Web3 Jogja).*
+> **Kavling AI is a prototype for model-driven property valuation, cryptographic appraisal attestations, and fractional real-estate vault accounting on BNB Chain.**
+
+> **Status:** local/testnet prototype. The sample properties and market figures in this repository are illustrative. No property ownership, investment product, legal title, rental income, or production deployment is represented by this code.
 
 ---
 
@@ -31,14 +32,14 @@
 
 ## 🇬🇧 Executive Summary (English)
 
-**Kavling AI** merges physical Indonesian property yields with on-chain liquidity on **BNB Chain**. By integrating autonomous AI appraisal agents, BMKG geological fault telemetry, and audited fractional vaults, Kavling AI enables transparent, sub-second, and mathematically verified real estate investment.
+**Kavling AI** explores how a property valuation service can produce an explainable appraisal, sign that appraisal with EIP-712, and feed the result into an on-chain fractional-vault workflow. The valuation engine is a deterministic automated valuation model (AVM), not a trained machine-learning model or a legal property appraisal. By integrating regional assumptions, zoning factors, climate/seismic risk factors, and title-type discounts, it provides an inspectable prototype for future data-backed models.
 
 ---
 
 ## 🧮 Mathematical & Cryptographic Architecture
 
 ### 1. Multi-Factor Automated Valuation Model (AVM)
-The AI Valuation Agent in Python implements a multi-layer hedonic pricing engine:
+The Python valuation service implements a deterministic, multi-factor pricing model:
 
 $$\text{Valuation} = \left( (\text{Land Area} \times P_{\text{land}} \times \mu_{\text{zone}} \times \lambda_{\text{title}} \times \eta_{\text{scale}}) + (\text{Building Area} \times P_{\text{build}} \times (1 - \delta_{\text{age}})) \right) \times \psi_{\text{climate}}$$
 
@@ -134,7 +135,7 @@ cd contracts
 forge test -vvv
 ```
 
-**Results: 10 / 10 Tests Passed**
+The repository currently contains 10 Foundry tests and 14 Python tests. Run them locally and report the output from your environment; this README does not treat historical output as a live deployment guarantee.
 * `test_BuyWithNativeBNB_AndRefundExcess()` — PASS
 * `test_ComplianceGate_Enforced()` — PASS
 * `test_DualCurrencyYield_DepositAndClaimBNB()` — PASS
@@ -153,7 +154,7 @@ Run the Python test suite:
 PYTHONPATH=agent .venv/bin/pytest agent/tests/ -v
 ```
 
-**Results: 14 / 14 Tests Passed**
+The Python tests cover the deterministic AVM, risk and zoning modules, API responses, and EIP-712 signature recovery.
 * `test_canggu_villa_appraisal` — PASS
 * `test_yogyakarta_heritage_appraisal` — PASS
 * `test_climate_risk_high_elevation` — PASS
@@ -189,14 +190,28 @@ Open your browser at `http://localhost:3000`.
 
 ---
 
-## 🏆 Hackathon Alignment
+## ⚠️ Prototype boundaries
 
-| Criteria | Score Target | Kavling AI Implementation |
-| :--- | :--- | :--- |
-| **Technical Innovation** | 95 / 100 | Autonomous Python AI valuation, BMKG geological fault scoring, and EIP-712 ECDSA proofs. |
-| **Security & Safety** | 98 / 100 | Monotonic nonces, soft-cap escrow protection, zero-underflow accrual math, 10 passing Foundry tests. |
-| **Regional Relevance** | 98 / 100 | Tailored specifically for Indonesian agrarian law (SHM/HGB), Yogyakarta, Bali, and Jakarta real estate. |
-| **Architecture & UX** | 95 / 100 | Zero-dependency, ultra-fast Modulify Bento-grid dApp with live EIP-712 visualizer and bilingual toggle. |
+- The valuation inputs are repository-owned assumptions. They are not live market data and are not independently validated.
+- The zoning, title, climate, and seismic modules are analytical demonstrations, not official legal, engineering, BMKG, or land-registry integrations.
+- `SAMPLE_PROPERTIES` and the static frontend listings are illustrative demo data. They are not offers to sell property or tokens.
+- The contracts are designed for local testing and testnet experimentation. They have not been audited, deployed to a production network, or approved by a regulator.
+- The compliance endpoint only validates the shape of an address. It must not be described as KYC, AML, Bappebti, OJK, or accredited-investor verification.
+- Do not put a real private key in the repository, browser bundle, or shell history. Configure `AGENT_PRIVATE_KEY` through a secret manager or an untracked environment file.
+
+## Development notes
+
+This repository is split into three independently testable parts:
+
+1. `agent/` — FastAPI AVM and EIP-712 proof service.
+2. `contracts/` — Foundry contracts and tests.
+3. `frontend/` — dependency-free browser demo. It is intentionally usable without a deployed contract address, but labels local estimates and illustrative data as such.
+
+The OpenZeppelin dependency is pinned as a git submodule. After cloning, run:
+
+```bash
+git submodule update --init --recursive
+```
 
 ---
 
