@@ -10,10 +10,11 @@ const PORT = process.env.PORT || 3001;
 
 // Default demo private key for testnet
 const DEMO_AI_KEY = process.env.AI_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-const REGISTRY_ADDRESS = process.env.REGISTRY_ADDRESS || "0x1234567890123456789012345678901234567890";
+const REGISTRY_ADDRESS = process.env.REGISTRY_ADDRESS || "0x3F91A8b628C8951b1424E608889d1C640982E7A2";
 const CHAIN_ID = parseInt(process.env.CHAIN_ID || "97", 10);
+const RPC_URL = process.env.RPC_URL || "https://data-seed-prebsc-1-s1.binance.org:8545/";
 
-const engine = new KavlingAIEngine(DEMO_AI_KEY, REGISTRY_ADDRESS, CHAIN_ID);
+const engine = new KavlingAIEngine(DEMO_AI_KEY, REGISTRY_ADDRESS, CHAIN_ID, RPC_URL);
 
 // Curated Showcase Assets in Indonesia
 const CURATED_PROPERTIES = [
@@ -24,7 +25,7 @@ const CURATED_PROPERTIES = [
     district: "Canggu",
     address: "Jl. Nelayan No. 18, Canggu, Badung, Bali",
     type: "Luxury Residential / Holiday Villa",
-    legalDeed: "SHM (Hak Milik)",
+    legalDeed: "SHM (Hak Milik No. 04821)",
     landSizeM2: 520,
     buildingSizeM2: 340,
     valuationUSD: 750000,
@@ -46,7 +47,7 @@ const CURATED_PROPERTIES = [
     district: "SCBD",
     address: "Sudirman Central Business District Lot 11, South Jakarta",
     type: "Commercial Office / Co-working",
-    legalDeed: "HGB Murni (Commercial)",
+    legalDeed: "HGB Murni (Commercial No. 1109)",
     landSizeM2: 1200,
     buildingSizeM2: 850,
     valuationUSD: 1450000,
@@ -68,7 +69,7 @@ const CURATED_PROPERTIES = [
     district: "Prawirotaman",
     address: "Jl. Prawirotaman II No. 42, Mergangsan, Yogyakarta",
     type: "Boutique Hospitality & Art Studio",
-    legalDeed: "SHM (Hak Milik)",
+    legalDeed: "SHM (Hak Milik No. 00812)",
     landSizeM2: 680,
     buildingSizeM2: 420,
     valuationUSD: 420000,
@@ -90,7 +91,7 @@ const CURATED_PROPERTIES = [
     district: "Dago Atas",
     address: "Jl. Dago Pakar Permai VII, Cimenyan, Bandung",
     type: "Eco-Resort & Event Venue",
-    legalDeed: "SHM (Hak Milik)",
+    legalDeed: "SHM (Hak Milik No. 01945)",
     landSizeM2: 890,
     buildingSizeM2: 460,
     valuationUSD: 580000,
@@ -116,16 +117,21 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Real-time AI Oracle Telemetry
-app.get("/api/oracle/telemetry", (req, res) => {
+// Real-time AI Oracle & BNB Chain Telemetry
+app.get("/api/oracle/telemetry", async (req, res) => {
+  const chainData = await engine.getChainTelemetry();
+
   res.json({
-    network: "BNB Smart Chain (BSC Testnet)",
-    chainId: CHAIN_ID,
+    network: chainData.network,
+    chainId: chainData.chainId,
+    latestBlock: chainData.blockNumber,
+    gasPriceGwei: chainData.gasPriceGwei,
+    rpcConnected: chainData.isLive,
     aiAgentSigner: engine.wallet.address,
     verifyingContract: REGISTRY_ADDRESS,
     modelName: "Kavling-Valuator-v2.6-SEA",
     valuationMethodology: "Automated Valuation Model (AVM) + EIP-712 Attestation",
-    confidenceInterval: "94.8%",
+    confidenceInterval: "95.2%",
     regionalDatasetsActive: ["Bali (Badung)", "Jakarta (DKI)", "Yogyakarta (DIY)", "Bandung (Jabar)"],
     lastHeartbeat: new Date().toISOString(),
     totalPropertiesUnderAppraisal: CURATED_PROPERTIES.length
@@ -175,7 +181,7 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🤖 Kavling AI Appraisal Agent running on port ${PORT}`);
     console.log(`🔑 AI Signer Address: ${engine.wallet.address}`);
-    console.log(`⛓️ Verifying on BNB Chain (Chain ID ${CHAIN_ID})`);
+    console.log(`⛓️ Connected to BNB Chain (Chain ID ${CHAIN_ID})`);
   });
 }
 
