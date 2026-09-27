@@ -1,6 +1,6 @@
 /* Kavling browser client: honest local estimates with optional API-backed attestations. */
 
-const API_URL = "http://localhost:8000";
+const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname) ? "http://localhost:8000" : window.location.origin;
 const PROPERTY_SCENARIOS = [
   { name: "Canggu Sanctuary", city: "Bali", district: "Canggu", type: "Hospitality", value: 750000, fraction: 50, yield: 9.8 },
   { name: "SCBD Executive", city: "Jakarta", district: "SCBD", type: "Commercial", value: 1200000, fraction: 50, yield: 8.4 },

@@ -3,6 +3,7 @@ Kavling AI - FastAPI REST Server & Autonomous Oracle Gateway
 """
 import time
 from threading import Lock
+from pathlib import Path
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -135,7 +136,7 @@ SAMPLE_PROPERTIES = [
     }
 ]
 
-@app.get("/")
+@app.get("/api/info")
 def root():
     agent_account = _agent_account()
     return {
@@ -265,3 +266,10 @@ def verify_investor(req: ComplianceRequest):
         "message": "No KYC/AML provider is connected; this endpoint only validates address syntax.",
         "timestamp": int(time.time())
     }
+
+
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+if FRONTEND_DIR.is_dir():
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

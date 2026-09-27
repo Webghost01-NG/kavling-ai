@@ -4,7 +4,7 @@ from kavling.server import app
 client = TestClient(app)
 
 def test_root_endpoint():
-    response = client.get("/")
+    response = client.get("/api/info")
     assert response.status_code == 200
     data = response.json()
     assert data["protocol"] == "Kavling AI"

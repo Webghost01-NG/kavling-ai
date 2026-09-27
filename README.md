@@ -176,7 +176,10 @@ The Python tests cover the deterministic AVM, risk and zoning modules, API respo
 
 ### 1. Launch Python AI Valuation Agent
 ```bash
+cp agent/.env.example agent/.env
+# Edit agent/.env and provide a dedicated testnet AGENT_PRIVATE_KEY.
 source .venv/bin/activate
+set -a; source agent/.env; set +a
 uvicorn kavling.server:app --app-dir agent --host 0.0.0.0 --port 8000
 ```
 API docs available at: `http://localhost:8000/docs`
@@ -206,6 +209,8 @@ This repository is split into three independently testable parts:
 1. `agent/` — FastAPI AVM and EIP-712 proof service.
 2. `contracts/` — Foundry contracts and tests.
 3. `frontend/` — dependency-free browser demo. It is intentionally usable without a deployed contract address, but labels local estimates and illustrative data as such.
+
+For a single-origin hosted preview, `render.yaml` defines a GitHub-connected Render web service that serves both the FastAPI API and the frontend. Create the service from the repository's Blueprint, add the secret environment variables in Render, and enable automatic deploys. The first deployment URL is assigned by Render; do not hardcode an unverified URL in this repository.
 
 The OpenZeppelin dependency is pinned as a git submodule. After cloning, run:
 
