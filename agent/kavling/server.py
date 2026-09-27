@@ -248,6 +248,46 @@ def get_telemetry():
         }
     }
 
+
+@app.get("/api/deployment")
+def get_deployment_status():
+    """Report configured contract addresses and whether bytecode exists at them."""
+    registry_address = settings.REGISTRY_ADDRESS or None
+    if not registry_address:
+        return {
+            "status": "not_configured",
+            "chainId": settings.CHAIN_ID,
+            "registryAddress": None,
+            "registryCodePresent": False,
+        }
+
+    try:
+        provider = Web3(Web3.HTTPProvider(settings.RPC_URL, request_kwargs={"timeout": 4}))
+        checksum_address = Web3.to_checksum_address(registry_address)
+        if not provider.is_connected():
+            return {
+                "status": "rpc_unavailable",
+                "chainId": settings.CHAIN_ID,
+                "registryAddress": checksum_address,
+                "registryCodePresent": None,
+            }
+        code = provider.eth.get_code(checksum_address)
+        has_code = len(code) > 2
+        return {
+            "status": "deployed" if has_code else "address_has_no_code",
+            "chainId": settings.CHAIN_ID,
+            "registryAddress": checksum_address,
+            "registryCodePresent": has_code,
+        }
+    except Exception as exc:
+        return {
+            "status": "invalid_configuration",
+            "chainId": settings.CHAIN_ID,
+            "registryAddress": registry_address,
+            "registryCodePresent": False,
+            "error": str(exc),
+        }
+
 @app.post("/api/compliance/verify")
 def verify_investor(req: ComplianceRequest):
     """

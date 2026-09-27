@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("judge-sim-btn").addEventListener("click", previewLifecycle);
   document.getElementById("lang-toggle").addEventListener("click", toggleLanguage);
   document.getElementById("appraisal-form").dispatchEvent(new Event("submit"));
+  updateDeploymentStatus();
 });
 
 function renderProperties() {
@@ -59,7 +60,7 @@ async function handleAppraisalSubmit(event) {
   button.disabled = true;
   button.firstChild.textContent = "Calculating... ";
   try {
-    const response = await fetchWithTimeout(`${API_URL}/api/appraise`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ city: params.city, district: districtFor(params.city), land_area_m2: params.land, building_area_m2: params.building, zoning: params.zoning, title: params.title, nonce: Date.now(), verifying_contract: "0x1234567890123456789012345678901234567890" }) }, 3500);
+    const response = await fetchWithTimeout(`${API_URL}/api/appraise`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ city: params.city, district: districtFor(params.city), land_area_m2: params.land, building_area_m2: params.building, zoning: params.zoning, title: params.title, nonce: Date.now() }) }, 3500);
     if (!response.ok) throw new Error(`agent returned ${response.status}`);
     const data = await response.json();
     displayAppraisal(data.appraisal, data.eip712_proof, "Agent API · signed proof returned");
@@ -119,6 +120,19 @@ function previewLifecycle() {
   let index = 0;
   status.textContent = steps[index];
   const interval = window.setInterval(() => { index += 1; if (index >= steps.length) return window.clearInterval(interval); status.textContent = steps[index]; }, 700);
+}
+
+async function updateDeploymentStatus() {
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/api/deployment`, {}, 4000);
+    if (!response.ok) throw new Error("deployment status unavailable");
+    const status = await response.json();
+    if (status.status === "deployed") setNetworkStatus("CHAIN CONNECTED");
+    else if (status.status === "address_has_no_code") setNetworkStatus("NO CONTRACT CODE");
+    else setNetworkStatus("LOCAL DEMO");
+  } catch (error) {
+    setNetworkStatus("LOCAL DEMO");
+  }
 }
 
 function toggleLanguage() {

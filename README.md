@@ -176,9 +176,11 @@ The Python tests cover the deterministic AVM, risk and zoning modules, API respo
 
 ### 1. Launch Python AI Valuation Agent
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r agent/requirements.txt
 cp agent/.env.example agent/.env
 # Edit agent/.env and provide a dedicated testnet AGENT_PRIVATE_KEY.
-source .venv/bin/activate
 set -a; source agent/.env; set +a
 uvicorn kavling.server:app --app-dir agent --host 0.0.0.0 --port 8000
 ```
