@@ -129,11 +129,13 @@ Built with **Foundry**, incorporating:
 
 ### Test Suite Execution Output
 ```text
-[PASS] test_FractionalPurchaseAndYieldStreaming() (gas: 1794269)
-[PASS] test_PausableCircuitBreaker() (gas: 1533717)
-[PASS] test_RegisterPropertyWithAppraisal_Success() (gas: 330676)
-[PASS] test_RegisterProperty_InvalidSigner_Reverts() (gas: 29236)
-Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 24.93ms
+Ran 5 tests for test/KavlingProtocol.t.sol:KavlingProtocolTest
+[PASS] test_BuyWithNativeBNB_AndRefundExcess() (gas: 1975934)
+[PASS] test_ComplianceGate_Enforced() (gas: 2031984)
+[PASS] test_Fuzz_BuyWithUSDT(uint256) (runs: 256, μ: 1994183, ~: 1994208)
+[PASS] test_RegisterPropertyWithAppraisal_Success() (gas: 1867972)
+[PASS] test_YieldClaimAfterTransfer_NoUnderflow() (gas: 2160918)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 126.92ms
 ```
 
 ---
