@@ -1,28 +1,45 @@
-import React from "react";
-import { X, Wallet, CheckCircle2, ShieldCheck, ArrowRight } from "lucide-react";
+import React, { useState } from "react";
+import { X, Wallet, CheckCircle2, ShieldCheck, ArrowRight, AlertTriangle } from "lucide-react";
 import { NETWORK_CONFIG } from "../data/mockData";
+import { switchNetworkToBscTestnet, fetchWalletBalances } from "../services/contractService";
 
 export default function WalletModal({ isOpen, onClose, wallet, setWallet }) {
   if (!isOpen) return null;
 
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [networkError, setNetworkError] = useState(null);
+
   const handleConnect = async (providerName) => {
-    // If browser ethereum exists, try connecting or fallback to demo
+    setIsConnecting(true);
+    setNetworkError(null);
+
     if (window.ethereum) {
       try {
+        // 1. Ensure user is on BSC Testnet
+        const switched = await switchNetworkToBscTestnet();
+        if (!switched) {
+          setNetworkError("Could not switch to BNB Smart Chain Testnet (Chain ID 97)");
+          setIsConnecting(false);
+          return;
+        }
+
+        // 2. Request accounts
         const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
         if (accounts && accounts[0]) {
+          const balances = await fetchWalletBalances(accounts[0]);
           setWallet({
             connected: true,
             address: accounts[0],
-            usdtBalance: 1250,
-            tBnbBalance: 0.85,
+            usdtBalance: balances.usdtBalance,
+            tBnbBalance: balances.tBnbBalance,
             provider: providerName
           });
+          setIsConnecting(false);
           onClose();
           return;
         }
       } catch (e) {
-        // Fallback to simulation
+        console.warn("Wallet extension connection failed or rejected, falling back to simulation account", e);
       }
     }
 
@@ -34,6 +51,7 @@ export default function WalletModal({ isOpen, onClose, wallet, setWallet }) {
       tBnbBalance: 1.45,
       provider: providerName
     });
+    setIsConnecting(false);
     onClose();
   };
 
@@ -71,6 +89,13 @@ export default function WalletModal({ isOpen, onClose, wallet, setWallet }) {
             </p>
           </div>
 
+          {networkError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{networkError}</span>
+            </div>
+          )}
+
           {!wallet.connected ? (
             <div className="space-y-2.5 pt-2">
               {[
@@ -81,8 +106,9 @@ export default function WalletModal({ isOpen, onClose, wallet, setWallet }) {
               ].map((provider, i) => (
                 <button
                   key={i}
+                  disabled={isConnecting}
                   onClick={() => handleConnect(provider.name)}
-                  className="w-full p-3.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-emerald-500/40 flex items-center justify-between transition-all group text-left"
+                  className="w-full p-3.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-emerald-500/40 flex items-center justify-between transition-all group text-left disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{provider.icon}</span>
