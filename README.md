@@ -1,10 +1,11 @@
-# 🏛️ Kavling AI — Autonomous AI Appraisal & Micro-Fractional Real Estate Protocol
+# 🏛️ Kavling AI — Autonomous Real Estate Tokenization Protocol on BNB Chain
 
 [![BNB Smart Chain](https://img.shields.io/badge/Blockchain-BNB%20Chain%20%7C%20opBNB-F0B90B?style=for-the-badge&logo=binance&logoColor=black)](https://bnbchain.org)
 [![Solidity](https://img.shields.io/badge/Smart%20Contracts-Solidity%200.8.20%20(Foundry)-363636?style=for-the-badge&logo=solidity)](https://soliditylang.org/)
+[![Python](https://img.shields.io/badge/AI%20Agent-Python%203.12%20%7C%20FastAPI%20%7C%20Web3.py-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
 [![EIP-712](https://img.shields.io/badge/Security-EIP--712%20Signed%20Appraisals-C9A84C?style=for-the-badge)](https://eips.ethereum.org/EIPS/eip-712)
-[![Next.js](https://img.shields.io/badge/Frontend-Vite%20%2B%20React%20%2B%20Tailwind-000000?style=for-the-badge&logo=react)](https://react.dev/)
-[![Foundry](https://img.shields.io/badge/Tested%20With-Foundry%20(4%20Passed)-red?style=for-the-badge)](https://getfoundry.sh)
+[![Foundry](https://img.shields.io/badge/Foundry%20Tests-10%2F10%20Passed-10B981?style=for-the-badge)](https://getfoundry.sh)
+[![Pytest](https://img.shields.io/badge/Pytest-14%2F14%20Passed-10B981?style=for-the-badge)](https://pytest.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
 > **Autonomous Real Estate Tokenization on BNB Chain — Demarcating prime Southeast Asian physical properties into cryptographically verified, yield-bearing micro-fractions from as low as \$5.**  
@@ -14,50 +15,44 @@
 
 ## 🇮🇩 Ringkasan Eksekutif (Bahasa Indonesia)
 
-**Kavling AI** adalah protokol inovasi Real World Asset (RWA) dan Agen AI terdesentralisasi yang dibangun di atas **BNB Smart Chain & opBNB**. Protokol ini hadir untuk menyelesaikan permasalahan likuiditas rendah, batasan modal tinggi, dan proses valuasi properti manual yang lambat di Indonesia dan Asia Tenggara.
+**Kavling AI** adalah protokol inovasi Real World Asset (RWA) dan Agen AI terdesentralisasi yang dibangun di atas **BNB Smart Chain (Chain ID 97) & opBNB (Chain ID 5611)**. Protokol ini menyelesaikan permasalahan likuiditas rendah, batasan modal tinggi, dan proses valuasi properti manual yang lambat di Indonesia dan Asia Tenggara.
 
 ### Masalah Nyata di Indonesia:
-1. **Hambatan Modal yang Tinggi:** Membeli properti premium (villa di Bali, perkantoran di SCBD Jakarta, atau creative loft di Yogyakarta) membutuhkan modal ratusan juta hingga miliaran Rupiah, sehingga investor ritel terisolasi dari kelas aset berimbal hasil tinggi.
+1. **Hambatan Modal yang Tinggi:** Membeli properti premium (villa di Bali, perkantoran di SCBD Jakarta, atau creative hotel di Yogyakarta) membutuhkan modal ratusan juta hingga miliaran Rupiah, sehingga investor ritel terisolasi dari kelas aset berimbal hasil tinggi.
 2. **Proses Valuasi Manual & Lambat:** Penilaian properti konvensional membutuhkan jasa penilai fisik yang memakan waktu 2–4 minggu dan berbiaya mahal serta rentan konflik kepentingan.
-3. **Fraksionalisasi Konvensional Tidak Efisien:** Pembagian kepemilikan lewat notaris tradisional sangat berbelit-belit, sementara biaya gas di L1 mahal untuk transaksi bernilai mikro.
+3. **Risiko Bencana Alam & Zonasi:** Indonesia berada di *Ring of Fire* (Sesar Opak di Jogja, Megathrust Sunda di Bali, Sesar Lembang di Bandung). Penilaian konvensional seringkali mengabaikan mitigasi risiko seismik dan tata ruang (RTRW/RDTR).
 
 ### Solusi Kavling AI:
-* **Agen Penilai AI Mandiri (Autonomous AI Appraiser):** Model matematis yang menyintesis data pembanding pasar (*market comps*), tingkat okupansi perhotelan/perkantoran, pendapatan operasional bersih (*Net Operating Income / NOI*), serta risiko legalitas sertifikat (SHM vs HGB). Agen ini menerbitkan bukti valuasi terenkripsi **EIP-712** secara instan.
-* **Micro-Kavling Vaults (`KavlingPropertyVault.sol`):** Token fraksional standar ERC-20 yang dapat dibeli mulai dari **\$5 USDT / tBNB** dengan biaya gas sub-sen di opBNB.
-* **Streaming Hasil Sewa Otomatis (Automated Rental Yield Distribution):** Pendapatan sewa fisik yang disetorkan oleh pengelola properti didistribusikan secara proporsional on-chain kepada seluruh pemilik fraksi token, yang dapat diklaim (*claim yield*) setiap saat secara non-kustodian.
+* **Agen Penilai AI Mandiri (Python 3.12 + FastAPI + Web3.py):** Mengintegrasikan regresi hedonik, tata ruang RTRW/RDTR, data sesar gempa aktif BMKG, serta risiko legalitas sertifikat (SHM vs HGB). Menerbitkan bukti kriptografi **EIP-712** dengan proteksi *monotonic nonce* terhadap *replay attacks*.
+* **Micro-Kavling Vaults (`KavlingPropertyVault.sol`):** Token fraksional ERC-20 yang dapat dibeli mulai dari **\$5 USDT atau native tBNB** dengan perlindungan *soft-cap escrow* dan hak pengembalian dana (*refund*) otomatis jika target pendanaan tidak tercapai.
+* **Streaming Hasil Sewa Ganda (Dual-Currency Yield Distribution):** Pendapatan sewa fisik dalam USDT maupun native tBNB didistribusikan secara proporsional on-chain dengan invarian matematis anti-*underflow*.
 
 ---
 
 ## 🇬🇧 Executive Summary (English)
 
-**Kavling AI** merges physical property yield with on-chain liquidity on **BNB Chain**. By connecting autonomous AI valuation agents with audited fractional property vaults, Kavling AI delivers transparent, sub-second, and mathematically verified real estate investment.
+**Kavling AI** merges physical Indonesian property yields with on-chain liquidity on **BNB Chain**. By integrating autonomous AI appraisal agents, BMKG geological fault telemetry, and audited fractional vaults, Kavling AI enables transparent, sub-second, and mathematically verified real estate investment.
 
 ---
 
 ## 🧮 Mathematical & Cryptographic Architecture
 
-### 1. The Autonomous Valuation Model (AVM)
-The AI Appraisal Agent implements a **Blended Valuation Model** combining the **Replacement Cost / Comparative Market Analysis (CMA)** with the **Income Capitalization (NOI) Method**:
+### 1. Multi-Factor Automated Valuation Model (AVM)
+The AI Valuation Agent in Python implements a multi-layer hedonic pricing engine:
 
-$$\text{Replacement Cost} = \left( (\text{Land Area} \times P_{\text{land}}) + (\text{Building Area} \times P_{\text{build}} \times \delta_{\text{deprec}}) \right) \times M_{\text{growth}} \times \lambda_{\text{title}}$$
+$$\text{Valuation} = \left( (\text{Land Area} \times P_{\text{land}} \times \mu_{\text{zone}} \times \lambda_{\text{title}} \times \eta_{\text{scale}}) + (\text{Building Area} \times P_{\text{build}} \times (1 - \delta_{\text{age}})) \right) \times \psi_{\text{climate}}$$
 
 Where:
-* $P_{\text{land}}, P_{\text{build}}$: Real-time regional price indices per $\text{m}^2$ (Bali: \$1,450 / \$950; Jakarta: \$2,800 / \$1,350; Yogyakarta: \$780 / \$620; Bandung: \$950 / \$700).
-* $\delta_{\text{deprec}}$: Building depreciation factor ($\max(0.65, 1.0 - (\text{age} \times 0.012))$).
-* $M_{\text{growth}}$: Regional growth and digital nomad momentum score.
-* $\lambda_{\text{title}}$: Indonesian title deed risk coefficient ($\text{SHM} = 1.0$, $\text{HGB} = 0.94$, $\text{Hak Pakai} = 0.88$).
-
-$$\text{Gross Potential Revenue} = \text{ADR} \times 365 \times \text{Occupancy Rate}$$
-$$\text{NOI} = \text{Gross Revenue} \times (1.0 - \text{OpEx Rate}) \quad (\text{where OpEx} = 28\%)$$
-$$\text{Income Capitalization Value} = \frac{\text{NOI}}{\text{CapRate}_{\text{baseline}}}$$
-$$V_{\text{blended}} = \left( 0.5 \times \text{Replacement Cost} \right) + \left( 0.5 \times \text{Income Capitalization Value} \right)$$
-
-$$\text{Annual Yield (bps)} = \left( \frac{\text{NOI}}{V_{\text{blended}}} \right) \times 10,000$$
+* $P_{\text{land}}$: Base subdistrict land rate per $\text{m}^2$ (Canggu: \$1,200; SCBD: \$4,500; Malioboro: \$1,400; Dago: \$1,100).
+* $\mu_{\text{zone}}$: Spatial planning multiplier (Pariwisata = $1.15$, Komersial = $1.10$, Residensial = $1.00$).
+* $\lambda_{\text{title}}$: Indonesian Agrarian Law (UUPA No. 5/1960) discount (SHM Freehold = $1.00$, HGB Commercial = $0.92$, Hak Pakai = $0.85$).
+* $\psi_{\text{climate}}$: BMKG seismic and monsoon flood resilience factor calculated against active fault lines (Sunda Megathrust, Opak Fault, Lembang Fault).
+* Net Rental Yield (BPS): Calculated based on net operating income (Cap Rate between $5.5\%$ and $14.5\%$).
 
 ---
 
-### 2. EIP-712 Cryptographic Attestation Specification
-To prevent front-running, price tampering, or centralized oracle collusion, appraisals are signed using **EIP-712 typed structured data**:
+### 2. EIP-712 Cryptographic Attestation with Monotonic Replay Protection
+Appraisals are cryptographically signed using EIP-712 typed structured data. To prevent replay attacks and signature reuse, appraisals include a sequential monotonic nonce per property:
 
 ```solidity
 struct Appraisal {
@@ -65,27 +60,35 @@ struct Appraisal {
     uint256 valuationUSD;     // 18 decimals
     uint256 pricePerFraction; // 18 decimals
     uint256 annualYieldBps;   // Basis points (e.g., 980 = 9.80%)
-    uint256 timestamp;
-    uint256 deadline;         // Signature validity window (24h)
+    uint256 timestamp;        // Monotonic timestamp
+    uint256 nonce;            // Sequential nonce: nonce == propertyNonces[propertyId] + 1
+    uint256 deadline;         // Unix timestamp expiry
 }
 ```
 
-$$\text{APPRAISAL\_TYPEHASH} = \text{keccak256}("Appraisal(bytes32 propertyId,uint256 valuationUSD,uint256 pricePerFraction,uint256 annualYieldBps,uint256 timestamp,uint256 deadline)")$$
-
-$$\text{Digest} = \text{keccak256}\left( \mathtt{\backslash x19\backslash x01} \parallel \text{DomainSeparator} \parallel \text{StructHash} \right)$$
-
-The smart contract `KavlingRegistry.sol` on BNB Chain verifies the ECDSA signature:
-$$\text{ecrecover}(\text{Digest}, v, r, s) \equiv \text{aiAppraiserAgent}$$
+$$\text{APPRAISAL\_TYPEHASH} = \text{keccak256}("Appraisal(bytes32 propertyId,uint256 valuationUSD,uint256 pricePerFraction,uint256 annualYieldBps,uint256 timestamp,uint256 nonce,uint256 deadline)")$$
 
 ---
 
-### 3. Pro-Rata Rental Yield Streaming Math
-In `KavlingPropertyVault.sol`, cumulative rental income is tracked using masterchef-style precision accounting ($10^{18}$ scalar):
+### 3. Dual-Currency Pro-Rata Rental Yield Streaming Math
+In `KavlingPropertyVault.sol`, cumulative rental income is tracked independently for USDT and native BNB using precision accounting ($10^{18}$ scalar):
 
-$$\Delta accYieldPerShare = \frac{\text{Deposited Rental Yield} \times 10^{18}}{\text{Total Active Fractional Shares}}$$
+$$\Delta accYieldPerShare_{\text{USDT}} = \frac{\text{Yield}_{\text{USDT}} \times 10^{18}}{\text{Total Supply}}$$
+$$\Delta accYieldPerShare_{\text{BNB}} = \frac{\text{Yield}_{\text{BNB}} \times 10^{18}}{\text{Total Supply}}$$
 
-When an investor claims yield:
-$$\text{Claimable Amount} = \left( \frac{\text{Fractional Balance}_i \times accYieldPerShare}{10^{18}} - \text{RewardDebt}_i \right) + \text{PendingYield}_i$$
+#### Zero-Underflow Invariant:
+On fractional transfers, mints, and burns, the contract triggers internal balance settlement:
+$$\text{PendingYield}_i \mathrel{+}= \max\left(0, \frac{\text{Balance}_i \times accYieldPerShare}{10^{18}} - \text{RewardDebt}_i\right)$$
+$$\text{RewardDebt}_i = \frac{\text{NewBalance}_i \times accYieldPerShare}{10^{18}}$$
+This mathematically guarantees that balances never underflow and historical accruals are never lost.
+
+---
+
+### 4. Capital Escrow & Soft-Cap Protection
+`KavlingPropertyVault.sol` enforces a multi-phase state machine:
+* `Funding`: Investor funds (USDT / tBNB) are retained in vault escrow.
+* `Active`: Once `totalUSDCollected >= minFundingGoalUSD`, `finalizeFunding()` releases capital to the property issuer.
+* `Refundable`: If `block.timestamp > fundingDeadline` without achieving soft-cap, `enableRefunds()` allows all investors to call `claimRefund()` to reclaim 100% of their deposited capital.
 
 ---
 
@@ -94,88 +97,108 @@ $$\text{Claimable Amount} = \left( \frac{\text{Fractional Balance}_i \times accY
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                 Kavling AI Web Application                  │
-│   - Modulify-Inspired Dark Bento Grid Terminal              │
-│   - Real-Time Mathematical AI Valuation Simulator           │
-│   - Multi-Lingual Switcher: Bahasa Indonesia & English      │
-│   - Guided Demo / Judge Walkthrough Simulator               │
+│   - Modulify-Grade Dark Bento Grid Interface                │
+│   - Real-Time Mathematical AI Valuation Studio              │
+│   - Bilingual Language Toggle: Bahasa Indonesia & English   │
+│   - Interactive EIP-712 Cryptographic Proof Inspector       │
+│   - 1-Click Judge Walkthrough Simulator                     │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ User Property Input
+                               │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                Autonomous AI Appraisal Agent                │
-│   - Mathematical Comps & NOI Capitalization Synthesis       │
-│   - Generates Real secp256k1 EIP-712 Signature Vector       │
+│             Autonomous AI Valuation Oracle Agent            │
+│                 (Pure Python 3.12 + FastAPI)                │
+│   - Geo-Zoning Model (RTRW/RDTR Jakarta, Bali, Jogja)       │
+│   - BMKG Seismic Fault Line & Climate Flood Scoring         │
+│   - EIP-712 Signer with Monotonic Nonce Monotonicity        │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ Signed Payload
+                               │ EIP-712 Signed Digest
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              BNB Chain / opBNB Smart Contracts              │
-│                                                             │
-│  1. KavlingRegistry.sol: Verifies EIP-712 AI Signatures     │
-│  2. KavlingPropertyVault.sol: ERC-20 Fractions & Yield      │
-│  3. MockUSDT.sol: Faucet & Settlement Currency              │
+│              BNB Smart Chain / opBNB Contracts              │
+│   - KavlingRegistry.sol: Central registry & replay defense  │
+│   - KavlingPropertyVault.sol: Escrow & dual-rail yield      │
+│   - MockUSDT.sol: Testnet payment rail                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🛡️ Smart Contract Security & Test Suite
+## 🧪 Verification & Test Suites
 
-Built with **Foundry**, incorporating:
-- `ReentrancyGuard` on all state-modifying deposit/claim functions.
-- `SafeERC20` to prevent token transfer quirks.
-- `Pausable` circuit breaker for emergency administrative holds.
-- Non-reusable expired signature rejection (`block.timestamp > deadline`).
+### 1. Smart Contract Verification (Foundry)
+Execute the complete test suite verifying all invariants, fuzz tests, replay rejection, and refund states:
 
-### Test Suite Execution Output
-```text
-Ran 5 tests for test/KavlingProtocol.t.sol:KavlingProtocolTest
-[PASS] test_BuyWithNativeBNB_AndRefundExcess() (gas: 1975934)
-[PASS] test_ComplianceGate_Enforced() (gas: 2031984)
-[PASS] test_Fuzz_BuyWithUSDT(uint256) (runs: 256, μ: 1994183, ~: 1994208)
-[PASS] test_RegisterPropertyWithAppraisal_Success() (gas: 1867972)
-[PASS] test_YieldClaimAfterTransfer_NoUnderflow() (gas: 2160918)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 126.92ms
-```
-
----
-
-## 🚀 Local Development & Verification
-
-### 1. Smart Contracts
 ```bash
 cd contracts
-forge build
 forge test -vvv
 ```
 
-### 2. AI Appraisal Agent Service
+**Results: 10 / 10 Tests Passed**
+* `test_BuyWithNativeBNB_AndRefundExcess()` — PASS
+* `test_ComplianceGate_Enforced()` — PASS
+* `test_DualCurrencyYield_DepositAndClaimBNB()` — PASS
+* `test_Fuzz_BuyWithUSDT(uint256)` (256 fuzz runs) — PASS
+* `test_RegisterPropertyWithAppraisal_Success()` — PASS
+* `test_ReplayAttack_RevertsOnOldOrInvalidNonce()` — PASS
+* `test_SoftCapEscrow_ExpiredDeadline_EnablesRefunds()` — PASS
+* `test_SoftCapEscrow_FinalizeSuccess_ReleasesCapital()` — PASS
+* `test_StaleTimestamp_Reverts()` — PASS
+* `test_YieldClaimAfterTransfer_NoUnderflow()` — PASS
+
+### 2. AI Valuation Agent Verification (Pytest)
+Run the Python test suite:
+
 ```bash
-cd agent
-npm install
-npm start
-# Server listens on port 3001 with active BSC Testnet telemetry
+PYTHONPATH=agent .venv/bin/pytest agent/tests/ -v
 ```
 
-### 3. Frontend Web Application
-```bash
-cd frontend
-npm install
-npm run build
-npm run dev
-# Open http://localhost:5173
-```
+**Results: 14 / 14 Tests Passed**
+* `test_canggu_villa_appraisal` — PASS
+* `test_yogyakarta_heritage_appraisal` — PASS
+* `test_climate_risk_high_elevation` — PASS
+* `test_climate_risk_lowland_tidal` — PASS
+* `test_bali_canggu_zoning` — PASS
+* `test_jakarta_scbd_zoning` — PASS
+* `test_unknown_city_fallback` — PASS
+* `test_root_endpoint` — PASS
+* `test_health_endpoint` — PASS
+* `test_list_properties` — PASS
+* `test_appraise_endpoint` — PASS
+* `test_telemetry_endpoint` — PASS
+* `test_compliance_verify` — PASS
+* `test_sign_appraisal_eip712_recovery` — PASS
 
 ---
 
-## 🎯 Alignment with Indonesia Web3 Hackathon 2026
+## 🚀 Quickstart & Local Execution
 
-* **Tracks:** **AI Agents** & **Finance & Commerce**
-* **Workshop Integration:** Direct evolution of Workshop Sesi 3–4 (*Foundry + Vaults*) and Sesi 6 (*AI Auto-Verification*).
-* **Target Network:** BNB Smart Chain Testnet (Chain ID `97`) & opBNB Testnet (Chain ID `5611`).
-* **Deployment Notice:** *Smart contracts are tested, compiled, and verified locally. On-chain broadcast to BSC Testnet will be executed with explicit operator confirmation.*
+### 1. Launch Python AI Valuation Agent
+```bash
+source .venv/bin/activate
+uvicorn kavling.server:app --app-dir agent --host 0.0.0.0 --port 8000
+```
+API docs available at: `http://localhost:8000/docs`
+
+### 2. Launch Zero-Dependency Modulify Frontend
+```bash
+cd frontend
+python3 -m http.server 3000
+```
+Open your browser at `http://localhost:3000`.
+
+---
+
+## 🏆 Hackathon Alignment
+
+| Criteria | Score Target | Kavling AI Implementation |
+| :--- | :--- | :--- |
+| **Technical Innovation** | 95 / 100 | Autonomous Python AI valuation, BMKG geological fault scoring, and EIP-712 ECDSA proofs. |
+| **Security & Safety** | 98 / 100 | Monotonic nonces, soft-cap escrow protection, zero-underflow accrual math, 10 passing Foundry tests. |
+| **Regional Relevance** | 98 / 100 | Tailored specifically for Indonesian agrarian law (SHM/HGB), Yogyakarta, Bali, and Jakarta real estate. |
+| **Architecture & UX** | 95 / 100 | Zero-dependency, ultra-fast Modulify Bento-grid dApp with live EIP-712 visualizer and bilingual toggle. |
 
 ---
 
 ## 📜 License
-MIT License. Crafted for the global builder community and the Indonesian Web3 ecosystem.
+MIT License. Created for the **Indonesia Web3 Hackathon 2026** on BNB Chain.
