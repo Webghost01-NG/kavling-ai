@@ -214,6 +214,8 @@ This repository is split into three independently testable parts:
 
 For a single-origin hosted preview, `render.yaml` defines a GitHub-connected Render web service that serves both the FastAPI API and the frontend. Create the service from the repository's Blueprint, add the secret environment variables in Render, and enable automatic deploys. The first deployment URL is assigned by Render; do not hardcode an unverified URL in this repository.
 
+One-click Blueprint entry point for the working branch: [Deploy to Render](https://render.com/deploy?repo=https://github.com/Webghost01-NG/kavling-ai&branch=feat%2Fsubmission-hardening). After the first deploy, Render watches that GitHub branch and redeploys on each pushed commit. The deployment remains incomplete until `AGENT_PRIVATE_KEY` and `REGISTRY_ADDRESS` are supplied in Render's encrypted environment settings.
+
 The OpenZeppelin dependency is pinned as a git submodule. After cloning, run:
 
 ```bash

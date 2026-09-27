@@ -7,6 +7,8 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
       - key: AGENT_PRIVATE_KEY
         sync: false
       - key: REGISTRY_ADDRESS
