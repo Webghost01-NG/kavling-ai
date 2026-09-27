@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Cpu, Sparkles, ShieldCheck, Key, FileCheck, CheckCircle2, ArrowRight } from "lucide-react";
+import { ethers } from "ethers";
+import { computeRealPropertyValuation, generateEIP712AppraisalSignature } from "../services/appraisalEngine";
 
 export default function AIAppraiserTerminal({ t }) {
   const [formData, setFormData] = useState({
@@ -33,66 +35,57 @@ export default function AIAppraiserTerminal({ t }) {
     setIsEvaluating(true);
     setAppraisalResult(null);
 
-    // Call local agent API or fallback to internal model simulation
     try {
-      const res = await fetch("http://localhost:3001/api/appraise", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // 1. Compute real mathematical property valuation from parameters
+      const valuation = computeRealPropertyValuation({
+        cityKey: formData.city,
+        landSizeM2: parseFloat(formData.landSizeM2) || 450,
+        buildingSizeM2: parseFloat(formData.buildingSizeM2) || 280,
+        bedrooms: parseInt(formData.bedrooms, 10) || 3,
+        legalDeedType: formData.legalDeedType,
+        amenitiesCount: formData.amenities.length
+      });
+
+      // 2. Generate deterministic propertyId from name and legal deed
+      const propertyIdHex = ethers.id(`${formData.name}-${formData.city}-${formData.legalDeedType}`);
+
+      // 3. Generate genuine EIP-712 signed appraisal vector
+      const signedPayload = await generateEIP712AppraisalSignature({
+        propertyIdHex,
+        valuationUSD: valuation.valuationUSD,
+        pricePerFractionUSD: valuation.pricePerFractionUSD,
+        annualYieldBps: valuation.annualYieldBps
+      });
+
+      // Brief calculation tick for realistic UX
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      setAppraisalResult({
+        analysis: {
+          propertyId: propertyIdHex,
           name: formData.name,
           city: formData.city,
           district: formData.district,
-          landSizeM2: parseFloat(formData.landSizeM2) || 400,
-          buildingSizeM2: parseFloat(formData.buildingSizeM2) || 250,
-          bedrooms: parseInt(formData.bedrooms, 10) || 3,
-          legalDeedType: formData.legalDeedType,
-          amenities: formData.amenities
-        })
+          valuationUSD: valuation.valuationUSD,
+          valuationIDR: valuation.valuationIDR,
+          pricePerFractionUSD: valuation.pricePerFractionUSD,
+          totalFractions: valuation.totalFractions,
+          annualYieldBps: valuation.annualYieldBps,
+          annualYieldPercent: valuation.capRatePercent,
+          monthlyProjectedYieldUSD: Math.round(valuation.netOperatingIncome / 12),
+          confidenceScore: valuation.confidenceScore,
+          rawLandValue: valuation.rawLandValue,
+          rawBuildingValue: valuation.rawBuildingValue
+        },
+        signature: signedPayload.signature,
+        typedDataHash: signedPayload.typedDataHash,
+        appraiserAddress: signedPayload.appraiserAddress
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        setAppraisalResult({
-          analysis: data.analysis,
-          signature: data.onchainPayload.signature,
-          typedDataHash: data.onchainPayload.typedDataHash,
-          appraiserAddress: data.onchainPayload.appraiserAddress
-        });
-        setIsEvaluating(false);
-        return;
-      }
     } catch (err) {
-      // Fallback to client-side generation
+      console.error("Appraisal engine error:", err);
+    } finally {
+      setIsEvaluating(false);
     }
-
-    // Client-side fallback simulation with genuine EIP-712 formatting
-    await new Promise((resolve) => setTimeout(resolve, 1400));
-
-    const valuationUSD = 620000;
-    const mockSig = "0x89f41b3c9902e48231ad45bc901e479a83726105ce381a9412e0388410f931294821a84f9328a9c1e098485291b402847a982185c721038591823901bce471011c";
-    const mockHash = "0x3f9821098412e4981249810a9c82410948120e85912803810238012849102938";
-
-    setAppraisalResult({
-      analysis: {
-        propertyId: "0x9812e98410293810293810293810293810293810293810293810293810293810",
-        name: formData.name,
-        city: formData.city,
-        district: formData.district,
-        valuationUSD: valuationUSD,
-        valuationIDR: valuationUSD * 16200,
-        pricePerFractionUSD: 50,
-        totalFractions: 12400,
-        annualYieldBps: 980,
-        annualYieldPercent: "9.80",
-        monthlyProjectedYieldUSD: 5060,
-        confidenceScore: 0.95
-      },
-      signature: mockSig,
-      typedDataHash: mockHash,
-      appraiserAddress: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    });
-
-    setIsEvaluating(false);
   };
 
   return (
