@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 /**
  * @title KavlingRegistry
  * @notice Central registry for Indonesian & SEA Real Estate Assets tokenized on BNB Chain.
- * @dev Validates AI Agent valuations using EIP-712 cryptographically signed appraisals and manages investor compliance.
+ * @dev Validates AI Agent valuations using EIP-712 cryptographically signed appraisals with monotonic nonce replay protection and investor compliance.
  */
 contract KavlingRegistry is Ownable, EIP712 {
     using ECDSA for bytes32;
@@ -18,8 +18,9 @@ contract KavlingRegistry is Ownable, EIP712 {
         uint256 valuationUSD;     // 18 decimals, total appraisal in USD
         uint256 pricePerFraction; // 18 decimals, price per fractional token
         uint256 annualYieldBps;   // 100 bps = 1.00% expected APY (e.g. 850 = 8.50%)
-        uint256 timestamp;
-        uint256 deadline;
+        uint256 timestamp;        // Monotonic appraisal issuance timestamp
+        uint256 nonce;            // Sequential nonce preventing replay attacks
+        uint256 deadline;         // Unix timestamp expiry
     }
 
     struct Property {
@@ -37,13 +38,15 @@ contract KavlingRegistry is Ownable, EIP712 {
     }
 
     bytes32 public constant APPRAISAL_TYPEHASH = keccak256(
-        "Appraisal(bytes32 propertyId,uint256 valuationUSD,uint256 pricePerFraction,uint256 annualYieldBps,uint256 timestamp,uint256 deadline)"
+        "Appraisal(bytes32 propertyId,uint256 valuationUSD,uint256 pricePerFraction,uint256 annualYieldBps,uint256 timestamp,uint256 nonce,uint256 deadline)"
     );
 
     address public aiAppraiserAgent;
     bool public complianceEnforced; // When true, only verified investors can purchase fractions
 
     mapping(bytes32 => Property) public properties;
+    mapping(bytes32 => uint256) public propertyNonces;
+    mapping(bytes32 => uint256) public lastAppraisalTimestamp;
     mapping(address => bool) public isInvestorVerified;
     bytes32[] public propertyIds;
 
@@ -64,13 +67,16 @@ contract KavlingRegistry is Ownable, EIP712 {
         uint256 newValuationUSD,
         uint256 newPricePerFraction,
         uint256 newYieldBps,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 nonce
     );
     event VaultLinked(bytes32 indexed propertyId, address indexed vaultAddress);
     event PropertyStatusToggled(bytes32 indexed propertyId, bool isActive);
 
     error InvalidSigner();
     error SignatureExpired();
+    error InvalidNonce();
+    error StaleAppraisal();
     error PropertyAlreadyExists();
     error PropertyNotFound();
     error Unauthorized();
@@ -118,6 +124,10 @@ contract KavlingRegistry is Ownable, EIP712 {
         bytes calldata signature
     ) internal view {
         if (block.timestamp > appraisal.deadline) revert SignatureExpired();
+        if (appraisal.timestamp <= lastAppraisalTimestamp[appraisal.propertyId] && lastAppraisalTimestamp[appraisal.propertyId] != 0) {
+            revert StaleAppraisal();
+        }
+        if (appraisal.nonce != propertyNonces[appraisal.propertyId] + 1) revert InvalidNonce();
 
         bytes32 structHash = keccak256(
             abi.encode(
@@ -127,6 +137,7 @@ contract KavlingRegistry is Ownable, EIP712 {
                 appraisal.pricePerFraction,
                 appraisal.annualYieldBps,
                 appraisal.timestamp,
+                appraisal.nonce,
                 appraisal.deadline
             )
         );
@@ -152,6 +163,9 @@ contract KavlingRegistry is Ownable, EIP712 {
         if (appraisal.propertyId != propertyId) revert PropertyNotFound();
 
         _verifyAppraisalSignature(appraisal, signature);
+
+        propertyNonces[propertyId] = appraisal.nonce;
+        lastAppraisalTimestamp[propertyId] = appraisal.timestamp;
 
         Property storage prop = properties[propertyId];
         prop.propertyId = propertyId;
@@ -205,6 +219,9 @@ contract KavlingRegistry is Ownable, EIP712 {
 
         _verifyAppraisalSignature(appraisal, signature);
 
+        propertyNonces[appraisal.propertyId] = appraisal.nonce;
+        lastAppraisalTimestamp[appraisal.propertyId] = appraisal.timestamp;
+
         Property storage prop = properties[appraisal.propertyId];
         prop.valuationUSD = appraisal.valuationUSD;
         prop.pricePerFraction = appraisal.pricePerFraction;
@@ -215,7 +232,8 @@ contract KavlingRegistry is Ownable, EIP712 {
             appraisal.valuationUSD,
             appraisal.pricePerFraction,
             appraisal.annualYieldBps,
-            appraisal.timestamp
+            appraisal.timestamp,
+            appraisal.nonce
         );
     }
 
