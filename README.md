@@ -216,6 +216,15 @@ For a single-origin hosted preview, `render.yaml` defines a GitHub-connected Ren
 
 One-click Blueprint entry point for the working branch: [Deploy to Render](https://render.com/deploy?repo=https://github.com/Webghost01-NG/kavling-ai&branch=feat%2Fsubmission-hardening). After the first deploy, Render watches that GitHub branch and redeploys on each pushed commit. The deployment remains incomplete until `AGENT_PRIVATE_KEY` and `REGISTRY_ADDRESS` are supplied in Render's encrypted environment settings.
 
+After the app is hosted, open `/deploy/` for the wallet-connected deployment console. It is restricted to BSC Testnet, requests MetaMask approvals for each transaction, signs the EIP-712 appraisal in the browser, and records explorer links. It never asks for or handles a private key.
+
+The console uses the committed browser artifact manifest. If contract bytecode or ABI changes, rebuild and refresh that manifest before deploying the frontend:
+
+```bash
+cd contracts && forge build
+cd .. && node scripts/export_browser_artifacts.mjs
+```
+
 The OpenZeppelin dependency is pinned as a git submodule. After cloning, run:
 
 ```bash
