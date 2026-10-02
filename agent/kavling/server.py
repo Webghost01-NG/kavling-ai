@@ -2,9 +2,8 @@
 Kavling AI - FastAPI REST Server & Autonomous Oracle Gateway
 """
 import time
-from threading import Lock
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
@@ -65,14 +64,105 @@ class ComplianceRequest(BaseModel):
     national_id_hash: str # SHA256(NIK KTP)
 
 
-_last_seen_nonces: Dict[str, int] = {}
-_nonce_lock = Lock()
+REGISTRY_READ_ABI = [
+    {
+        "inputs": [],
+        "name": "aiAppraiserAgent",
+        "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
+        "name": "propertyNonces",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+]
 
 
 def _agent_account() -> Account:
     if not settings.AGENT_PRIVATE_KEY:
         raise RuntimeError("AGENT_PRIVATE_KEY is not configured")
     return Account.from_key(settings.AGENT_PRIVATE_KEY)
+
+
+def _public_agent_address() -> Optional[str]:
+    if not settings.AGENT_PRIVATE_KEY:
+        return None
+    try:
+        return _agent_account().address
+    except Exception:
+        return None
+
+
+def _inspect_registry():
+    """Return public readiness details and a connected registry only when fully authorized."""
+    details = {
+        "status": "not_configured",
+        "chainId": settings.CHAIN_ID,
+        "rpcChainId": None,
+        "rpcReachable": False,
+        "registryConfigured": bool(settings.REGISTRY_ADDRESS),
+        "registryAddress": None,
+        "registryCodePresent": None,
+        "signerConfigured": bool(settings.AGENT_PRIVATE_KEY),
+        "signerAddress": None,
+        "authorizedAppraiser": None,
+        "signerMatchesAuthorized": False,
+    }
+    if not settings.REGISTRY_ADDRESS:
+        return details, None
+
+    try:
+        registry_address = Web3.to_checksum_address(settings.REGISTRY_ADDRESS)
+    except (TypeError, ValueError):
+        details["status"] = "invalid_configuration"
+        return details, None
+    details["registryAddress"] = registry_address
+
+    try:
+        provider = Web3(Web3.HTTPProvider(settings.RPC_URL, request_kwargs={"timeout": 8}))
+        if not provider.is_connected():
+            details["status"] = "rpc_unavailable"
+            return details, None
+        details["rpcReachable"] = True
+        rpc_chain_id = provider.eth.chain_id
+        details["rpcChainId"] = rpc_chain_id
+        if rpc_chain_id != settings.CHAIN_ID:
+            details["status"] = "chain_mismatch"
+            return details, None
+
+        code = provider.eth.get_code(registry_address)
+        details["registryCodePresent"] = bool(code)
+        if not code:
+            details["status"] = "address_has_no_code"
+            return details, None
+
+        registry = provider.eth.contract(address=registry_address, abi=REGISTRY_READ_ABI)
+        authorized_appraiser = Web3.to_checksum_address(registry.functions.aiAppraiserAgent().call())
+        details["authorizedAppraiser"] = authorized_appraiser
+        if not settings.AGENT_PRIVATE_KEY:
+            details["status"] = "signer_not_configured"
+            return details, None
+
+        signer_address = _public_agent_address()
+        if not signer_address:
+            details["status"] = "signer_invalid"
+            return details, None
+        details["signerAddress"] = signer_address
+        details["signerMatchesAuthorized"] = signer_address.lower() == authorized_appraiser.lower()
+        if not details["signerMatchesAuthorized"]:
+            details["status"] = "signer_mismatch"
+            return details, None
+
+        details["status"] = "ready"
+        return details, (provider, registry)
+    except Exception:
+        # Do not echo provider exceptions or configuration details into public responses.
+        details["status"] = "rpc_unavailable"
+        return details, None
 
 # Pre-seeded Indonesian Curated Properties
 SAMPLE_PROPERTIES = [
@@ -137,11 +227,11 @@ SAMPLE_PROPERTIES = [
 
 @app.get("/api/info")
 def root():
-    agent_account = _agent_account()
     return {
         "protocol": "Kavling AI",
-        "description": "Autonomous Real Estate Tokenization Protocol on BNB Chain",
-        "appraiser_agent_address": agent_account.address,
+        "description": "Indonesian property valuation prototype on BNB Chain",
+        "appraiser_agent_address": _public_agent_address(),
+        "signer_configured": bool(settings.AGENT_PRIVATE_KEY),
         "target_chain_id": settings.CHAIN_ID,
         "supported_cities": list(INDONESIA_REGIONAL_BASE_PRICES.keys()),
         "status": "online"
@@ -152,7 +242,8 @@ def health():
     return {
         "status": "healthy",
         "timestamp": int(time.time()),
-        "agent": _agent_account().address,
+        "signerConfigured": bool(settings.AGENT_PRIVATE_KEY),
+        "registryConfigured": bool(settings.REGISTRY_ADDRESS),
         "chainId": settings.CHAIN_ID
     }
 
@@ -168,18 +259,36 @@ def appraise_property(req: AppraisalRequest):
     """
     Computes mathematical valuation and signs EIP-712 appraisal with nonce replay prevention.
     """
-    try:
-        if req.chain_id is not None and req.chain_id != settings.CHAIN_ID:
-            raise HTTPException(status_code=400, detail="Requested chain does not match the configured chain")
+    if req.chain_id is not None and req.chain_id != settings.CHAIN_ID:
+        raise HTTPException(status_code=400, detail="Requested chain does not match the configured chain")
+    if not settings.AGENT_PRIVATE_KEY:
+        raise HTTPException(status_code=503, detail="Appraisal signer is not configured")
+    if not settings.REGISTRY_ADDRESS:
+        raise HTTPException(status_code=503, detail="Registry is not configured")
 
-        verifying_contract = settings.REGISTRY_ADDRESS or req.verifying_contract
-        if not verifying_contract:
-            raise HTTPException(status_code=503, detail="REGISTRY_ADDRESS is not configured")
-        if req.verifying_contract and Web3.to_checksum_address(req.verifying_contract) != Web3.to_checksum_address(
-            verifying_contract
-        ):
+    try:
+        verifying_contract = Web3.to_checksum_address(settings.REGISTRY_ADDRESS)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Configured registry address is invalid") from exc
+    if req.verifying_contract:
+        try:
+            requested_registry = Web3.to_checksum_address(req.verifying_contract)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="Requested registry address is invalid") from exc
+        if requested_registry != verifying_contract:
             raise HTTPException(status_code=400, detail="Requested registry does not match the configured registry")
 
+    readiness, registry_context = _inspect_registry()
+    if readiness["status"] != "ready" or registry_context is None:
+        raise HTTPException(status_code=503, detail=f"Signing service is not ready: {readiness['status']}")
+
+    _, registry = registry_context
+    try:
+        current_nonce = registry.functions.propertyNonces(bytes.fromhex(req.property_id[2:])).call()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not read the deployed property nonce") from exc
+
+    try:
         appraisal_result = calculate_appraisal(
             property_id_hex=req.property_id,
             city=req.city,
@@ -196,36 +305,16 @@ def appraise_property(req: AppraisalRequest):
             total_fractions=req.total_fractions
         )
 
-        with _nonce_lock:
-            next_nonce = _last_seen_nonces.get(req.property_id, 0) + 1
-            provider = Web3(Web3.HTTPProvider(settings.RPC_URL, request_kwargs={"timeout": 4}))
-            if provider.is_connected():
-                registry_address = Web3.to_checksum_address(verifying_contract)
-                if provider.eth.get_code(registry_address):
-                    registry = provider.eth.contract(
-                        address=registry_address,
-                        abi=[{
-                            "inputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
-                            "name": "propertyNonces",
-                            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-                            "stateMutability": "view",
-                            "type": "function",
-                        }],
-                    )
-                    property_id_bytes = bytes.fromhex(req.property_id[2:])
-                    next_nonce = registry.functions.propertyNonces(property_id_bytes).call() + 1
-
-            signed_proof = sign_appraisal(
-                property_id_hex=req.property_id,
-                valuation_usd_wei=int(appraisal_result["on_chain"]["valuationUSD"]),
-                price_per_fraction_wei=int(appraisal_result["on_chain"]["pricePerFraction"]),
-                annual_yield_bps=appraisal_result["annual_yield_bps"],
-                nonce=next_nonce,
-                chain_id=settings.CHAIN_ID,
-                verifying_contract=verifying_contract,
-            )
-            _last_seen_nonces[req.property_id] = next_nonce
-
+        next_nonce = current_nonce + 1
+        signed_proof = sign_appraisal(
+            property_id_hex=req.property_id,
+            valuation_usd_wei=int(appraisal_result["on_chain"]["valuationUSD"]),
+            price_per_fraction_wei=int(appraisal_result["on_chain"]["pricePerFraction"]),
+            annual_yield_bps=appraisal_result["annual_yield_bps"],
+            nonce=next_nonce,
+            chain_id=settings.CHAIN_ID,
+            verifying_contract=verifying_contract,
+        )
         return {
             "success": True,
             "appraisal": appraisal_result,
@@ -233,26 +322,31 @@ def appraise_property(req: AppraisalRequest):
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid appraisal input") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Could not calculate or sign appraisal") from exc
 
 @app.get("/api/oracle/telemetry")
 def get_telemetry():
     """
     Reports live RPC telemetry and explicitly marks unavailable data as degraded.
     """
-    agent_account = _agent_account()
+    agent_address = _public_agent_address()
     provider = Web3(Web3.HTTPProvider(settings.RPC_URL, request_kwargs={"timeout": 4}))
-    rpc_connected = provider.is_connected()
     latest_block = None
     gas_price_gwei = None
-    if rpc_connected:
-        latest_block = provider.eth.block_number
-        gas_price_gwei = round(float(provider.eth.gas_price) / 1e9, 4)
+    try:
+        rpc_connected = provider.is_connected()
+        if rpc_connected:
+            latest_block = provider.eth.block_number
+            gas_price_gwei = round(float(provider.eth.gas_price) / 1e9, 4)
+    except Exception:
+        rpc_connected = False
     return {
         "chainId": settings.CHAIN_ID,
         "network": "BNB Smart Chain Testnet" if settings.CHAIN_ID == 97 else "opBNB Testnet",
-        "appraiserAgent": agent_account.address,
+        "appraiserAgent": agent_address,
         "rpcConnected": rpc_connected,
         "latestBlock": latest_block,
         "gasPriceGwei": gas_price_gwei,
@@ -270,42 +364,9 @@ def get_telemetry():
 
 @app.get("/api/deployment")
 def get_deployment_status():
-    """Report configured contract addresses and whether bytecode exists at them."""
-    registry_address = settings.REGISTRY_ADDRESS or None
-    if not registry_address:
-        return {
-            "status": "not_configured",
-            "chainId": settings.CHAIN_ID,
-            "registryAddress": None,
-            "registryCodePresent": False,
-        }
-
-    try:
-        provider = Web3(Web3.HTTPProvider(settings.RPC_URL, request_kwargs={"timeout": 4}))
-        checksum_address = Web3.to_checksum_address(registry_address)
-        if not provider.is_connected():
-            return {
-                "status": "rpc_unavailable",
-                "chainId": settings.CHAIN_ID,
-                "registryAddress": checksum_address,
-                "registryCodePresent": None,
-            }
-        code = provider.eth.get_code(checksum_address)
-        has_code = len(code) > 2
-        return {
-            "status": "deployed" if has_code else "address_has_no_code",
-            "chainId": settings.CHAIN_ID,
-            "registryAddress": checksum_address,
-            "registryCodePresent": has_code,
-        }
-    except Exception as exc:
-        return {
-            "status": "invalid_configuration",
-            "chainId": settings.CHAIN_ID,
-            "registryAddress": registry_address,
-            "registryCodePresent": False,
-            "error": str(exc),
-        }
+    """Report deployment readiness without exposing credentials or RPC errors."""
+    details, _ = _inspect_registry()
+    return details
 
 @app.post("/api/compliance/verify")
 def verify_investor(req: ComplianceRequest):

@@ -73,7 +73,9 @@ https://github.com/Webghost01-NG/kavling-ai
 
 https://kavling-ai.vercel.app
 
-The public production frontend is manually deployed. A push to `feat/submission-hardening` automatically created a Vercel Preview deployment; that branch does not currently update the stable production alias.
+Canonical production branch: `main`. The public frontend is live at the URL above. Hosted signing remains **PENDING**; the Render Blueprint is configured in the repository, but there is no provisioned service URL yet. Production currently displays an explicitly unsigned local estimate.
+
+Hosted agent URL: PENDING
 
 ## Demo Video URL
 
@@ -86,17 +88,17 @@ Solidity 0.8.34, Foundry, OpenZeppelin contracts, Python 3.14 runtime in local t
 ## Testing Evidence
 
 - Foundry: 12/12 tests pass; fuzz test executed 256 runs.
-- Python: 17/17 tests pass (one Starlette/httpx deprecation warning).
+- Python: 23/23 tests pass (one Starlette/httpx deprecation warning).
 - Testnet: successful deployment receipts, bytecode reads, Sourcify exact-match verification for all three contracts, and successful registration, vault linking, USDT/native buys, funding finalization, yield deposits/USDT claim, and agent-signed appraisal update. Refer to [DEPLOYMENT.md](DEPLOYMENT.md) for receipts and details.
-- Frontend: headless Chromium confirmed live RPC values render on the public site. Hosted API signing is not yet wired/deployed, and the wallet write path was not browser-tested with an interactive wallet in this environment.
+- Frontend: JavaScript syntax checks pass. A local API-to-BSC Testnet check confirmed the configured signer matches the registry-authorized appraiser and returned a signed appraisal at nonce 3; this was not broadcast. Production live RPC reads were previously browser-verified. Hosted API signing is not wired/deployed, and the wallet write path was not browser-tested with an interactive wallet in this environment.
 
 ## Current Limitations
 
-- Render signing API is not yet deployed/healthy. The live app currently displays an unsigned local estimate; a separate API→registry signing flow was tested directly against the deployed registry. An operator must provision the Render service with the appraiser key, deployed registry address, CORS origin, and frontend agent URL.
+- Render signing API is not provisioned; no live agent URL exists yet. The Render Blueprint is configured. An operator must create/deploy it, set `AGENT_PRIVATE_KEY` and `REGISTRY_ADDRESS` as private environment variables, verify `/api/health`, `/api/deployment`, and `/api/appraise`, then wire its real hostname into `frontend/deployment.js`. The production UI currently shows an unsigned local estimate.
 - Property title, location, market values, regional baselines, climate/seismic inputs, and yield are not independently sourced or verified.
 - One illustrative property is registered; the issuer and smoke-test investor were the same wallet.
 - MockUSDT and tBNB are testnet-only. This is not an audited production system or legally enforceable real-estate tokenization.
 
 ## Future Roadmap
 
-Provision a dedicated low-balance signing service; add sourced and timestamped market/risk data; run independent smart-contract, data, and legal reviews before considering real assets.
+Provision and verify the hosted signing service; add sourced and timestamped market/risk data; run independent smart-contract, data, and legal reviews before considering real assets.

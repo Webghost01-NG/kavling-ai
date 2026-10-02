@@ -47,7 +47,7 @@ The prototype uses EVM contracts and EIP-712 signatures so a wallet can inspect 
 ## How It Works
 
 1. Enter a scenario and assumptions in the valuation studio.
-2. The Python agent calculates a deterministic estimate and signs an appraisal payload.
+2. When a hosted agent is available, the Python service calculates a deterministic estimate and signs an appraisal payload; until then, the UI labels its local result **Unsigned local estimate**.
 3. Connect an EVM wallet on BSC Testnet and submit the signed payload to the registry.
 4. Use test assets to buy fractions in the linked property vault; the live panel reads state and links receipts.
 5. The vault can demonstrate funding finalization and illustrative USDT/tBNB yield claims.
@@ -94,12 +94,12 @@ Deployment source commit: [`42b7cd3`](https://github.com/Webghost01-NG/kavling-a
 
 ## Live Demo
 
-[Open Kavling AI](https://kavling-ai.vercel.app). It reads live registry/vault/token data from BSC Testnet and submits transactions through the user’s wallet. Vercel is Git-connected to this repository; feature branches create Preview deployments, and the production branch should be `main` so merged releases update the stable alias. The FastAPI valuation/signing service is a separate Render Blueprint and is **not currently deployed**; hosted valuation currently falls back to an unsigned local estimate. An operator must provision `AGENT_PRIVATE_KEY` and `REGISTRY_ADDRESS` in Render, configure CORS, and set the frontend agent origin before hosted signatures are available.
+[Open Kavling AI](https://kavling-ai.vercel.app). It reads live registry/vault/token data from BSC Testnet and submits transactions through the user's wallet. The canonical production branch is `main`. The FastAPI service is configured by [`render.yaml`](render.yaml), but no Render service is currently provisioned: the previously known Render host returns 404, and no Render account/API credentials are available in this environment. Accordingly, production valuation currently displays an explicitly unsigned local estimate. A local end-to-end API check against BSC Testnet succeeded with the appraiser key already configured in this machine's environment; this does not mean a hosted service is live.
 
 ## Judge Quickstart
 
 1. Open the [live app](https://kavling-ai.vercel.app) and scroll to **Live protocol demo** to see deployed state without connecting a wallet.
-2. Open **Valuation studio** and calculate the Bali/Canggu scenario; inspect whether the hosted agent is available and whether the proof is signed.
+2. Open **Valuation studio** and calculate the Bali/Canggu scenario. The deployed app currently produces an **Unsigned local estimate** because hosted Render activation and production `agentUrl` wiring remain pending. When activated, this step should show the hosted deterministic agent's EIP-712 proof, signer, nonce, and registry address.
 3. For writes, connect a wallet configured for BSC Testnet (97), obtain tBNB from a faucet, request faucet MockUSDT, then buy a small fraction. Wallet prompts and confirmed BscScan transaction links appear in the page.
 4. Review the registry/vault links above and this repository’s onchain evidence.
 
@@ -116,8 +116,8 @@ The app requests wallet access only after an explicit click; each write requires
 Latest complete run after the correctness fixes:
 
 - Solidity: **12/12 tests passing**, including fuzzing (`test_Fuzz_BuyWithUSDT`, 256 runs).
-- Python: **17/17 tests passing**, including signature verification, chain/registry constraints, and live property nonce handling.
-- Frontend: JavaScript syntax checks passed; headless Chromium confirmed the production site reads current testnet vault state. The agent-signed appraisal was separately verified against the deployed registry; the production site currently falls back to an unsigned local estimate while the hosted API is pending. Wallet writes were not browser-tested with an interactive wallet in this environment.
+- Python: **23/23 tests passing**, including health without a valid signer, fail-closed signing on appraiser mismatch, signature generation, and registry nonce handling.
+- Frontend: JavaScript syntax checks passed. A local API run against BSC Testnet confirmed signer authorization, registry bytecode, CORS preflight, and a signed appraisal for the deployed property at nonce 3 (not broadcast). Production still shows an unsigned local estimate because Render is not provisioned and `agentUrl` remains intentionally empty. Wallet writes were not browser-tested with an interactive wallet in this environment.
 
 Run locally:
 
@@ -175,12 +175,12 @@ The reproducible Foundry script and exact constructor values are documented in [
 - Regional pricing/risk/zoning assumptions are curated/hard-coded; no live official or market integrations are present.
 - `MockUSDT`, tBNB, price inputs, property valuation, and yield deposits are test/demo-only.
 - This does not tokenize legal ownership, perform KYC, prove regulatory compliance, verify title, or guarantee returns.
-- Backend hosted signing is not yet provisioned. It requires the operator to configure a dedicated secret and origin. Do not reuse a wallet that holds valuable assets.
-- Git pushes create automatic Vercel Preview deployments; the current feature branch is not the production branch, so the stable production URL is not updated by these pushes.
+- Backend hosted signing is not yet provisioned. Render access is unavailable from this environment. The operator must create the Blueprint, set the signer key and registry address as private environment variables, deploy, and then wire the confirmed service URL into `frontend/deployment.js`.
+- `main` is the canonical Vercel production branch; production redeployment after this release remains pending merge and deploy access.
 
 ## Roadmap
 
-1. Provision and health-check the hosted signing service with a dedicated low-balance testnet key.
+1. Provision and health-check the hosted signing service with a dedicated low-balance testnet key, then wire its confirmed URL and verify the production signed flow.
 2. Add sourced, timestamped market/risk datasets and explicit provenance before changing model claims.
 3. Obtain independent legal, property-data, and smart-contract reviews before any production or real-asset use.
 
