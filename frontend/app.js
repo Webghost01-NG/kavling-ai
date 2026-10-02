@@ -4,7 +4,7 @@ import { deployment } from "./deployment.js";
 
 const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? "http://localhost:8000"
-  : deployment.agentUrl || window.location.origin;
+  : deployment.agentUrl || null;
 const RPC = new ethers.JsonRpcProvider(deployment.rpcUrl, deployment.chainId);
 const REGISTRY_ABI = artifacts.KavlingRegistry.abi;
 const VAULT_ABI = artifacts.KavlingPropertyVault.abi;
@@ -37,6 +37,7 @@ let liveProperty;
 let appraiserAddress;
 let latestProof;
 let latestProofPropertyId;
+let transactionPending = false;
 
 document.addEventListener("DOMContentLoaded", initialize);
 
@@ -53,14 +54,26 @@ function initialize() {
   $("deposit-bnb-yield-button").addEventListener("click", depositBnbYield);
   $("claim-usdt-button").addEventListener("click", claimUsdtYield);
   $("claim-bnb-button").addEventListener("click", claimBnbYield);
+  $("dismiss-wallet-notice").addEventListener("click", () => { $("wallet-notice").hidden = true; });
   setWalletControls(false);
   setContractLinks();
   loadLiveState();
   $("appraisal-form").dispatchEvent(new Event("submit"));
 
   if (window.ethereum?.on) {
-    window.ethereum.on("chainChanged", () => window.location.reload());
-    window.ethereum.on("accountsChanged", () => window.location.reload());
+    window.ethereum.on("chainChanged", (chainId) => {
+      if (walletSigner && chainId?.toLowerCase() !== `0x${deployment.chainId.toString(16)}`) {
+        clearWalletConnection("Wallet network changed. Reconnect on BNB Smart Chain Testnet to continue.");
+      }
+    });
+    window.ethereum.on("accountsChanged", (accounts) => {
+      if (walletSigner && (!accounts?.length || accounts[0]?.toLowerCase() !== userWallet?.toLowerCase())) {
+        clearWalletConnection("Wallet account changed. Reconnect to confirm the account you want to use.");
+      }
+    });
+    window.ethereum.on("disconnect", () => {
+      if (walletSigner) clearWalletConnection("Wallet provider disconnected. Reconnect your wallet and try again.");
+    });
   }
 }
 
@@ -104,6 +117,10 @@ async function handleAppraisalSubmit(event) {
   $("publish-appraisal-button").disabled = true;
   $("proof-action-status").textContent = "Waiting for the valuation service.";
   try {
+    if (!API_URL) {
+      displayAppraisal(localEstimate(params), null, "Local estimate · unsigned · hosted agent is not configured", propertyId);
+      return;
+    }
     const response = await fetchWithTimeout(`${API_URL}/api/appraise`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -173,27 +190,54 @@ function displayAppraisal(appraisal, proof, source, propertyId) {
 
 async function handleWalletConnect() {
   if (!window.ethereum) {
-    setNetworkStatus("WALLET NOT FOUND", true);
-    $("live-state-note").textContent = "Install MetaMask or another EVM wallet to use transaction controls.";
+    setNetworkStatus("WALLET REQUIRED", true);
+    showWalletNotice("MetaMask or another compatible EVM wallet is required.", "error");
     return;
   }
+  const button = $("wallet-btn");
+  button.disabled = true;
+  button.textContent = "Waiting for wallet…";
   try {
-    await window.ethereum.request({ method: "eth_requestAccounts" });
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    if (!Array.isArray(accounts) || accounts.length === 0) throw new Error("The wallet did not share an account.");
     await ensureTestnet();
-    walletProvider = new ethers.BrowserProvider(window.ethereum);
-    walletSigner = await walletProvider.getSigner();
-    userWallet = await walletSigner.getAddress();
-    registryWrite = new ethers.Contract(deployment.contracts.registry, REGISTRY_ABI, walletSigner);
-    vaultWrite = new ethers.Contract(deployment.contracts.vault, VAULT_ABI, walletSigner);
-    tokenWrite = new ethers.Contract(deployment.contracts.mockUsdt, TOKEN_ABI, walletSigner);
-    $("wallet-btn").textContent = `${userWallet.slice(0, 6)}…${userWallet.slice(-4)}`;
+    const currentChain = await window.ethereum.request({ method: "eth_chainId" });
+    if (currentChain.toLowerCase() !== `0x${deployment.chainId.toString(16)}`) {
+      throw new Error("Wallet is not connected to BNB Smart Chain Testnet (chain 97).");
+    }
+    const nextProvider = new ethers.BrowserProvider(window.ethereum);
+    const nextSigner = await nextProvider.getSigner();
+    const nextAddress = await nextSigner.getAddress();
+    walletProvider = nextProvider;
+    walletSigner = nextSigner;
+    userWallet = nextAddress;
+    registryWrite = new ethers.Contract(deployment.contracts.registry, REGISTRY_ABI, nextSigner);
+    vaultWrite = new ethers.Contract(deployment.contracts.vault, VAULT_ABI, nextSigner);
+    tokenWrite = new ethers.Contract(deployment.contracts.mockUsdt, TOKEN_ABI, nextSigner);
+    button.textContent = `${userWallet.slice(0, 6)}…${userWallet.slice(-4)}`;
     setNetworkStatus("BSC TESTNET · WALLET READY");
+    showWalletNotice(`Connected to BNB Smart Chain Testnet as ${userWallet.slice(0, 6)}…${userWallet.slice(-4)}. Transactions require your approval in the wallet.`, "success");
     setWalletControls(true);
     await loadLiveState();
     refreshProofAction();
   } catch (error) {
-    setNetworkStatus("WALLET CONNECTION FAILED", true);
-    $("live-state-note").textContent = shortError(error);
+    walletProvider = undefined;
+    walletSigner = undefined;
+    userWallet = null;
+    registryWrite = undefined;
+    vaultWrite = undefined;
+    tokenWrite = undefined;
+    button.textContent = "Connect wallet";
+    setWalletControls(false);
+    const message = error?.code === 4001
+      ? "Wallet request cancelled. No account was connected and no transaction was sent."
+      : error?.code === 4900 || error?.code === 4901
+        ? "Wallet provider disconnected. Reconnect your wallet and try again."
+        : `Wallet connection failed: ${shortError(error)}`;
+    setNetworkStatus("WALLET NOT CONNECTED", true);
+    showWalletNotice(message, "error");
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -216,6 +260,8 @@ async function ensureTestnet() {
       }],
     });
   }
+  const switchedChain = await window.ethereum.request({ method: "eth_chainId" });
+  if (switchedChain.toLowerCase() !== targetChain) throw new Error("Network switch was not completed. Select BNB Smart Chain Testnet (chain 97) in your wallet.");
 }
 
 async function loadLiveState() {
@@ -306,7 +352,8 @@ async function publishAppraisal() {
       nonce: BigInt(s.nonce),
       deadline: BigInt(s.deadline),
     };
-    await executeTransaction("Write EIP-712 appraisal", () => registryWrite.updateAppraisal(appraisal, latestProof.signature));
+    const confirmed = await executeTransaction("Write EIP-712 appraisal", () => registryWrite.updateAppraisal(appraisal, latestProof.signature));
+    if (!confirmed) return;
     latestProof = null;
     $("publish-appraisal-button").disabled = true;
     $("proof-action-status").textContent = "Appraisal update confirmed by BNB Testnet.";
@@ -388,6 +435,9 @@ async function claimBnbYield() {
 }
 
 async function executeTransaction(label, sendTransaction) {
+  if (!walletSigner || transactionPending) return false;
+  transactionPending = true;
+  setWalletControls(Boolean(walletSigner));
   $("live-state-note").textContent = `${label}: waiting for wallet confirmation.`;
   try {
     const tx = await sendTransaction();
@@ -398,6 +448,8 @@ async function executeTransaction(label, sendTransaction) {
     row.className = "tx-entry tx-confirmed";
     row.querySelector("span").textContent = `Confirmed in block ${receipt.blockNumber} · ${label}`;
     $("live-state-note").textContent = `${label}: confirmed in block ${receipt.blockNumber}.`;
+    transactionPending = false;
+    setWalletControls(Boolean(walletSigner));
     await loadLiveState();
     return true;
   } catch (error) {
@@ -406,6 +458,9 @@ async function executeTransaction(label, sendTransaction) {
     if (txHash) addTransactionRow(`${label} · reverted`, txHash, "tx-error", "Transaction reverted · inspect receipt");
     showLiveError(`${label}: ${message}`);
     return false;
+  } finally {
+    transactionPending = false;
+    setWalletControls(Boolean(walletSigner));
   }
 }
 
@@ -428,12 +483,36 @@ function addTransactionRow(label, hash, className, message) {
 }
 
 function setWalletControls(connected) {
-  for (const id of ["faucet-button", "buy-usdt-button", "buy-bnb-button", "deposit-yield-button", "deposit-bnb-yield-button"]) {
-    $(id).disabled = !connected;
+  const blocked = !connected || transactionPending;
+  if (blocked) {
+    for (const id of ["faucet-button", "buy-usdt-button", "buy-bnb-button", "deposit-yield-button", "deposit-bnb-yield-button", "finalize-button", "claim-usdt-button", "claim-bnb-button", "publish-appraisal-button"]) {
+      $(id).disabled = true;
+    }
+    return;
   }
-  $("finalize-button").disabled = !connected;
-  $("claim-usdt-button").disabled = !connected;
-  $("claim-bnb-button").disabled = !connected;
+  for (const id of ["faucet-button", "buy-usdt-button", "buy-bnb-button", "deposit-yield-button", "deposit-bnb-yield-button"]) $(id).disabled = false;
+}
+
+function showWalletNotice(message, kind = "info") {
+  const notice = $("wallet-notice");
+  notice.className = `wallet-notice ${kind}`;
+  $("wallet-notice-text").textContent = message;
+  notice.hidden = false;
+}
+
+function clearWalletConnection(message) {
+  walletProvider = undefined;
+  walletSigner = undefined;
+  userWallet = null;
+  registryWrite = undefined;
+  vaultWrite = undefined;
+  tokenWrite = undefined;
+  const button = $("wallet-btn");
+  button.textContent = "Connect wallet";
+  setWalletControls(false);
+  setNetworkStatus("WALLET NOT CONNECTED", true);
+  showWalletNotice(message, "error");
+  refreshProofAction();
 }
 
 function refreshProofAction() {

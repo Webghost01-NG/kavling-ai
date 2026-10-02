@@ -11,6 +11,23 @@ Kavling AI is a testnet prototype that turns an explainable Indonesian property 
 - Submission deadline: October 7, 2026
 - Live app: [kavling-ai.vercel.app](https://kavling-ai.vercel.app)
 
+## Product Preview
+
+The live interface reads the deployed BNB Smart Chain Testnet vault; the valuation scenarios shown are explicitly illustrative.
+
+![Kavling AI overview](docs/screenshots/overview.png)
+
+<details>
+<summary>Valuation studio, live testnet vault, and proof inspector</summary>
+
+![Valuation studio](docs/screenshots/valuation-studio.png)
+
+![Live testnet vault](docs/screenshots/live-testnet.png)
+
+![EIP-712 proof inspector](docs/screenshots/proof-inspector.png)
+
+</details>
+
 ## The Problem
 
 Property ownership is difficult to evaluate and access: evidence about location, use restrictions, title type, and regional risk can be fragmented, while direct ownership requires substantial capital. Kavling explores a transparent analysis and onchain record flow; it does not claim to solve title verification or make property fractions legally enforceable.
@@ -77,18 +94,7 @@ Deployment source commit: [`42b7cd3`](https://github.com/Webghost01-NG/kavling-a
 
 ## Live Demo
 
-[Open Kavling AI](https://kavling-ai.vercel.app). It reads live registry/vault/token data from BSC Testnet and submits transactions through the user’s wallet. A dedicated Vercel project is connected to this GitHub repository; a push to `feat/submission-hardening` automatically created a Vercel Preview deployment. The stable production URL remains manually deployed because pushes to this non-production branch do not update the production alias. The FastAPI valuation/signing service is a separate Render Blueprint and is **not currently deployed**; hosted valuation currently falls back to an unsigned local estimate. An operator must provision `AGENT_PRIVATE_KEY` and `REGISTRY_ADDRESS` in Render, configure CORS, and set the frontend agent origin before hosted signatures are available.
-
-## Judge Quickstart
-
-To reproduce a Foundry deployment, see [contracts/README.md](contracts/README.md) and [DEPLOYMENT.md](DEPLOYMENT.md). `MockUSDT` is a faucet test asset; it is not a supported external stablecoin deployment.
-
-### 60-second judge walkthrough
-
-1. Open the live app and point out the Active testnet vault and current appraisal read from chain.
-2. Calculate the Bali/Canggu scenario and explain the visible assumptions and unsigned local fallback (the hosted agent is pending).
-3. Inspect the recorded EIP-712 update in the registry transaction history.
-4. If demonstrating transactions live, connect BSC Testnet, use faucet MockUSDT, buy a small fraction, then show the receipt link. Do not promise real property rights or yield.
+[Open Kavling AI](https://kavling-ai.vercel.app). It reads live registry/vault/token data from BSC Testnet and submits transactions through the user’s wallet. Vercel is Git-connected to this repository; feature branches create Preview deployments, and the production branch should be `main` so merged releases update the stable alias. The FastAPI valuation/signing service is a separate Render Blueprint and is **not currently deployed**; hosted valuation currently falls back to an unsigned local estimate. An operator must provision `AGENT_PRIVATE_KEY` and `REGISTRY_ADDRESS` in Render, configure CORS, and set the frontend agent origin before hosted signatures are available.
 
 ## Judge Quickstart
 
@@ -103,13 +109,15 @@ Do not treat testnet tokens, scenarios, or yield as investment assets or returns
 
 Registry checks the EIP-712 domain, configured appraiser, expiry, increasing timestamp, and sequential per-property nonce. The vault uses OpenZeppelin ERC20/Ownable/ReentrancyGuard/Pausable components, escrows funds until its goal is reached, and offers pro-rata refunds after an unsuccessful funding period. Reward accounting is settled around fractional balance changes; self-transfer double settlement is explicitly prevented and tested. Purchases stop after the funding deadline. This is an internal development review, **not an independent security audit**. The registry owner can change appraiser/compliance/property settings; the vault owner controls BNB/USD assumptions, pausing, and emergency token withdrawal. The issuer receives funds on finalization.
 
+The app requests wallet access only after an explicit click; each write requires wallet confirmation. See [METAMASK_REVIEW.md](METAMASK_REVIEW.md) for the domain reputation review evidence. The warning is not cleared or endorsed by MetaMask.
+
 ## Testing
 
 Latest complete run after the correctness fixes:
 
 - Solidity: **12/12 tests passing**, including fuzzing (`test_Fuzz_BuyWithUSDT`, 256 runs).
 - Python: **17/17 tests passing**, including signature verification, chain/registry constraints, and live property nonce handling.
-- Frontend: JavaScript syntax checks passed; headless Chromium confirmed the production site reads current testnet vault state. The agent-signed appraisal was separately verified against the deployed registry; the production site currently falls back to an unsigned local estimate while the hosted API is pending.
+- Frontend: JavaScript syntax checks passed; headless Chromium confirmed the production site reads current testnet vault state. The agent-signed appraisal was separately verified against the deployed registry; the production site currently falls back to an unsigned local estimate while the hosted API is pending. Wallet writes were not browser-tested with an interactive wallet in this environment.
 
 Run locally:
 
