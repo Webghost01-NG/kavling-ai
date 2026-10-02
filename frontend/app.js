@@ -135,7 +135,7 @@ async function handleAppraisalSubmit(event) {
         chain_id: deployment.chainId,
         verifying_contract: deployment.contracts.registry,
       }),
-    }, 12000);
+    }, 45000);
     if (!response.ok) throw new Error(`valuation agent returned ${response.status}`);
     const data = await response.json();
     latestProof = data.eip712_proof;
