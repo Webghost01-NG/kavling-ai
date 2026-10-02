@@ -176,7 +176,7 @@ The reproducible Foundry script and exact constructor values are documented in [
 - `MockUSDT`, tBNB, price inputs, property valuation, and yield deposits are test/demo-only.
 - This does not tokenize legal ownership, perform KYC, prove regulatory compliance, verify title, or guarantee returns.
 - Backend hosted signing is not yet provisioned. Render access is unavailable from this environment. The operator must create the Blueprint, set the signer key and registry address as private environment variables, deploy, and then wire the confirmed service URL into `frontend/deployment.js`.
-- `main` is the canonical Vercel production branch; production redeployment after this release remains pending merge and deploy access.
+- `main` is the canonical Vercel production branch. The backend-hardening release was merged and its `main` deployment was verified Ready at the canonical URL; hosted signing remains pending Render provisioning.
 
 ## Roadmap
 
