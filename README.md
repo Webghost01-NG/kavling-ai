@@ -77,7 +77,7 @@ Deployment source commit: [`42b7cd3`](https://github.com/Webghost01-NG/kavling-a
 
 ## Live Demo
 
-[Open Kavling AI](https://kavling-ai.vercel.app). It reads live registry/vault/token data from BSC Testnet and submits transactions through the user’s wallet. A dedicated Vercel project is connected to this GitHub repository; automatic production deployment on the intended branch has not yet been confirmed. The FastAPI valuation/signing service is a separate Render Blueprint and is **not currently deployed**; hosted valuation currently falls back to an unsigned local estimate. An operator must provision `AGENT_PRIVATE_KEY` and `REGISTRY_ADDRESS` in Render, configure CORS, and set the frontend agent origin before hosted signatures are available.
+[Open Kavling AI](https://kavling-ai.vercel.app). It reads live registry/vault/token data from BSC Testnet and submits transactions through the user’s wallet. A dedicated Vercel project is connected to this GitHub repository; a push to `feat/submission-hardening` automatically created a Vercel Preview deployment. The stable production URL remains manually deployed because pushes to this non-production branch do not update the production alias. The FastAPI valuation/signing service is a separate Render Blueprint and is **not currently deployed**; hosted valuation currently falls back to an unsigned local estimate. An operator must provision `AGENT_PRIVATE_KEY` and `REGISTRY_ADDRESS` in Render, configure CORS, and set the frontend agent origin before hosted signatures are available.
 
 ## Judge Quickstart
 
@@ -168,7 +168,7 @@ The reproducible Foundry script and exact constructor values are documented in [
 - `MockUSDT`, tBNB, price inputs, property valuation, and yield deposits are test/demo-only.
 - This does not tokenize legal ownership, perform KYC, prove regulatory compliance, verify title, or guarantee returns.
 - Backend hosted signing is not yet provisioned. It requires the operator to configure a dedicated secret and origin. Do not reuse a wallet that holds valuable assets.
-- The Vercel project is GitHub-connected, but Git-triggered production deployment on the intended branch still needs verification.
+- Git pushes create automatic Vercel Preview deployments; the current feature branch is not the production branch, so the stable production URL is not updated by these pushes.
 
 ## Roadmap
 

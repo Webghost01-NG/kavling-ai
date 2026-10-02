@@ -62,8 +62,8 @@ The testnet BNB yield claim was attempted in the smoke sequence, but its transac
 
 ## Frontend and hosted agent
 
-- Frontend: [https://kavling-ai.vercel.app](https://kavling-ai.vercel.app), public production deployment; GitHub repository connected to the Vercel project, with `frontend/` as root and automatic Git deployment enabled.
-- Vercel deployment: [deployment details](https://vercel.com/webghost01-ngs-projects/kavling-ai/9SQhDVQ7HRVXLWYEWRFv5q5S8qEc). This initial manual production build is live; the project is GitHub-connected with `frontend/` as its root. A Git-triggered production deployment on the intended branch has not yet been verified, so do not assume pushes currently update the live URL.
+- Frontend: [https://kavling-ai.vercel.app](https://kavling-ai.vercel.app), public production deployment; GitHub repository connected to the Vercel project, with `frontend/` as root.
+- Vercel production deployment: [live app](https://kavling-ai.vercel.app). A push to `feat/submission-hardening` automatically created a Vercel Git Preview deployment, confirming that the repository connection works. The stable production alias is not updated by pushes to this non-production branch; the Vercel production branch must be changed in project settings or the feature branch merged to the configured production branch. No merge was performed.
 - Render Blueprint: `render.yaml`, `autoDeploy: true`. The public Render hostname currently returns 404; the signing API is **not deployed/healthy**.
 - To activate agent signing, create/update the Render Blueprint and set `AGENT_PRIVATE_KEY` (secret) and `REGISTRY_ADDRESS=0x0908E0409d593409D251306302FDca0C45198B9C` in Render. Configure `CORS_ORIGINS=https://kavling-ai.vercel.app`; the key must correspond to the deployed registry appraiser address shown above. Then a frontend release must configure `deployment.agentUrl` to the live Render origin. Never commit the signing key. Until those setup/deploy steps are done, hosted UI appraisals are unsigned local estimates (the separately tested API→registry flow was run with a temporary process environment).
 

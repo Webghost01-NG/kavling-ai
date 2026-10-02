@@ -73,7 +73,7 @@ https://github.com/Webghost01-NG/kavling-ai
 
 https://kavling-ai.vercel.app
 
-The live frontend is manually deployed and public. GitHub is connected to the Vercel project, but automatic production deploys on the intended branch are not yet verified.
+The public production frontend is manually deployed. A push to `feat/submission-hardening` automatically created a Vercel Preview deployment; that branch does not currently update the stable production alias.
 
 ## Demo Video URL
 
