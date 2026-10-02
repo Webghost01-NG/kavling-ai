@@ -5,29 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Kavling is an explainable property valuation and fractional vault prototype." />
     <title>Kavling — Property intelligence with an evidence trail</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <a class="wordmark" href="#top" aria-label="Kavling home"><span class="wordmark-mark">K</span><span>Kavling</span></a>
-        <div class="sidebar-label">Workspace</div>
+    <div class="app-shell" id="top">
+      <header class="topbar" aria-label="Site header">
+        <a class="wordmark" href="#overview" aria-label="Kavling home"><span class="wordmark-mark">K</span><span>Kavling</span></a>
         <nav class="primary-nav" aria-label="Primary navigation">
-          <a class="nav-link active" href="#overview"><span>◈</span>Overview</a>
-          <a class="nav-link" href="#valuation"><span>⌁</span>Valuation studio</a>
-          <a class="nav-link" href="#vaults"><span>▣</span>Vault mechanics</a>
-          <a class="nav-link" href="#live-demo"><span>◉</span>Live testnet</a>
-          <a class="nav-link" href="#proof"><span>⌘</span>Proof inspector</a>
+          <a class="nav-link" href="#overview">Overview</a>
+          <a class="nav-link" href="#valuation">Valuation</a>
+          <a class="nav-link" href="#live-demo">Vault</a>
+          <a class="nav-link" href="#proof">Proof</a>
+          <a class="nav-link nav-live-link" href="#live-demo">Live Testnet</a>
         </nav>
-        <div class="sidebar-spacer"></div>
-        <div class="sidebar-note"><span class="eyebrow">Prototype environment</span><strong>Testnet demo only</strong><p>Contracts are live on BNB Testnet. Property records, title references, and yield are illustrative.</p></div>
-        <a class="github-link" href="https://github.com/Webghost01-NG/kavling-ai" target="_blank" rel="noreferrer">View source <span>↗</span></a>
-      </aside>
+        <div class="topbar-actions">
+          <span class="network-pill" id="network-status">READ-ONLY TESTNET</span>
+          <button class="button button-dark" id="wallet-btn" type="button">Connect wallet</button>
+        </div>
+      </header>
+      <div class="wallet-notice" id="wallet-notice" role="status" aria-live="polite" hidden>
+        <span class="wallet-notice-mark" aria-hidden="true">i</span>
+        <span id="wallet-notice-text"></span>
+        <button id="dismiss-wallet-notice" class="notice-dismiss" type="button" aria-label="Dismiss message">×</button>
+      </div>
 
-      <main class="main-content" id="top">
-        <header class="topbar"><div class="breadcrumb"><span class="live-dot"></span> Kavling intelligence layer <span class="slash">/</span> Overview</div><div class="topbar-actions"><span class="network-pill" id="network-status">CONNECTING TO TESTNET</span><button class="button button-dark" id="wallet-btn" type="button">Connect wallet</button></div></header>
+      <main class="main-content">
 
-        <section class="hero-section" id="overview"><div class="hero-copy"><span class="eyebrow">Property intelligence · Southeast Asia</span><h1>Price real-world property with an <em>evidence trail.</em></h1><p>Kavling combines an explainable automated valuation model with zoning, title, and climate-risk factors. The output can be attested with EIP-712 before an on-chain vault uses it.</p><div class="hero-actions"><a class="button button-accent" href="#valuation">Open valuation studio <span>↗</span></a><a class="quiet-link" href="#proof">Inspect proof format <span>↓</span></a></div></div><div class="hero-aside"><div class="signal-card"><span class="signal-icon">✦</span><div><span class="eyebrow">Model posture</span><strong>Explainable AVM</strong><small>Deterministic inputs · no black-box score</small></div></div><div class="hero-rule"></div><div class="hero-aside-row"><span>Network</span><strong>BNB testnet-ready</strong></div><div class="hero-aside-row"><span>Data mode</span><strong>Illustrative / local</strong></div></div></section>
+        <section class="hero-section" id="overview"><div class="hero-copy"><span class="eyebrow">Research prototype · BNB Testnet only</span><h1>Property valuation, with a clearer <em>evidence trail.</em></h1><p>Kavling applies explicit regional, zoning, title, and modeled risk assumptions, then formats an appraisal for EIP-712 attestation. Current property records and valuation inputs are illustrative—not certified or live market data.</p><div class="hero-actions"><a class="button button-accent" href="#valuation">Open valuation studio <span>↗</span></a><a class="quiet-link" href="#proof">Inspect proof format <span>↓</span></a></div></div><div class="hero-aside"><div class="signal-card"><span class="signal-icon">✳</span><div><span class="eyebrow">Model posture</span><strong>Explainable AVM</strong><small>Deterministic inputs · no black-box score</small></div></div><div class="hero-rule"></div><div class="hero-aside-row"><span>Network</span><strong>BNB Smart Chain Testnet</strong></div><div class="hero-aside-row"><span>Chain ID</span><strong>97</strong></div><div class="hero-aside-row"><span>Data mode</span><strong>Illustrative prototype</strong></div></div></section>
 
         <section class="metric-grid" aria-label="Prototype metrics"><article class="metric-card"><span class="eyebrow">Model coverage</span><strong>04</strong><span>curated regional baselines</span></article><article class="metric-card"><span class="eyebrow">Appraisal proof</span><strong>EIP-712</strong><span>registry-checked signature</span></article><article class="metric-card"><span class="eyebrow">Live vault state</span><strong id="metric-vault-state">LOADING</strong><span>read from BNB Testnet</span></article><article class="metric-card accent-metric"><span class="eyebrow">Risk factors</span><strong>03</strong><span>zone · title · climate</span></article></section>
 
@@ -52,7 +57,7 @@
 
         <section class="lower-grid" id="proof"><div class="panel proof-panel"><div class="panel-heading"><div><span class="eyebrow">04 / Attestation layer</span><h2>Proof inspector</h2></div><span class="panel-status" id="proof-status">Unsigned estimate</span></div><p class="panel-intro">The agent signs appraisal fields with EIP-712. The registry checks its configured signer and sequential property nonce. A valid signature authenticates the payload, not the underlying property facts.</p><pre class="proof-code" id="eip-proof-box">Run a valuation to inspect the appraisal payload.</pre><button class="button button-accent full-button" id="publish-appraisal-button" type="button" disabled>Write signed appraisal to registry</button><p class="simulation-status" id="proof-action-status" aria-live="polite"></p></div><div class="panel lifecycle-panel"><div class="panel-heading"><div><span class="eyebrow">05 / Contract pathway</span><h2>Protocol lifecycle</h2></div><span class="panel-status muted">On-chain demo</span></div><div class="timeline" id="lifecycle"><div class="timeline-item"><span>01</span><div><strong>Appraise</strong><small>Deterministic model calculates assumptions</small></div></div><div class="timeline-item"><span>02</span><div><strong>Attest</strong><small>Agent signs EIP-712 payload</small></div></div><div class="timeline-item"><span>03</span><div><strong>Fund</strong><small>MockUSDT or tBNB purchases fractions</small></div></div><div class="timeline-item"><span>04</span><div><strong>Settle</strong><small>Vault finalizes and tracks test yield</small></div></div></div><p class="simulation-status">All controls above use chain receipts; the scenario does not represent a real property or investment.</p></div></section>
 
-        <footer class="footer"><span>© 2026 Kavling prototype</span><span>Model-driven property infrastructure</span><a href="/deploy/">Deploy console ↗</a><a href="https://github.com/Webghost01-NG/kavling-ai" target="_blank" rel="noreferrer">GitHub ↗</a></footer>
+        <footer class="footer"><span>© 2026 Kavling prototype · Testnet only</span><a href="/deploy/">Wallet deployment wizard ↗</a><a href="https://github.com/Webghost01-NG/kavling-ai" target="_blank" rel="noreferrer">GitHub ↗</a></footer>
       </main>
     </div>
     <script type="module" src="app.js"></script>
