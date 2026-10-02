@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kavling deployment console</title>
+    <link rel="stylesheet" href="deploy.css" />
+  </head>
+  <body>
+    <main class="deploy-shell">
+      <header class="deploy-header"><a href="/" class="brand"><span>K</span> Kavling</a><a href="/" class="back-link">← Back to app</a></header>
+      <section class="hero"><span class="label">Operator console · testnet only</span><h1>Deploy the protocol<br /><em>from your wallet.</em></h1><p>This console translates the Foundry deployment flow into wallet-approved browser transactions. No private key leaves your wallet.</p><div class="warning"><strong>Use a disposable BSC Testnet wallet.</strong><span>This deploys MockUSDT and an illustrative Canggu property scenario. It is not a mainnet deployment or a real investment product.</span></div></section>
+      <section class="console-grid">
+        <div class="card setup-card"><div class="card-head"><div><span class="label">01 / Connection</span><h2>Wallet and network</h2></div><span class="status" id="wallet-status">Not connected</span></div><button class="button primary" id="connect-button">Connect MetaMask</button><div class="wallet-detail" id="wallet-detail">Connect a wallet to begin. The wizard will request BSC Testnet (chain ID 97).</div></div>
+        <div class="card plan-card"><div class="card-head"><div><span class="label">02 / Execution plan</span><h2>Six approvals</h2></div><span class="status neutral">BSC TESTNET</span></div><div class="steps"><div id="step-mock"><b>01</b><span>Deploy MockUSDT<small>Test payment token</small></span></div><div id="step-registry"><b>02</b><span>Deploy Registry<small>Wallet becomes appraiser</small></span></div><div id="step-sign"><b>03</b><span>Sign appraisal<small>EIP-712 typed data</small></span></div><div id="step-register"><b>04</b><span>Register property<small>Registry transaction</small></span></div><div id="step-vault"><b>05</b><span>Deploy vault<small>Escrow + yield accounting</small></span></div><div id="step-link"><b>06</b><span>Link vault<small>Final registry transaction</small></span></div></div></div>
+      </section>
+      <section class="card activity-card"><div class="card-head"><div><span class="label">03 / Activity</span><h2>Transaction log</h2></div><button class="button ghost" id="clear-log">Clear</button></div><div class="log" id="log" aria-live="polite"><div class="log-empty">Your wallet approvals and transaction links will appear here.</div></div><button class="button primary deploy-button" id="deploy-button" disabled>Connect wallet to deploy</button><p class="fine-print">Never enter a seed phrase or private key on this page. Every state-changing action is confirmed by your connected wallet.</p></section>
+      <section class="card result-card" id="result-card" hidden><div class="card-head"><div><span class="label">04 / Result</span><h2>Deployment recorded</h2></div><span class="status success">Complete</span></div><pre id="deployment-result"></pre><p class="fine-print">Copy these public addresses into Render as <code>REGISTRY_ADDRESS</code>. Keep the appraiser wallet key only in Render's encrypted secret settings.</p></section>
+    </main>
+    <script type="module" src="deploy.js"></script>
+  </body>
+</html>

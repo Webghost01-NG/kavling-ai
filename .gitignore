@@ -28,9 +28,13 @@ contracts/broadcast/
 
 # Environment & Secrets
 .env
-.env*.local
-.env.production
+.env.*
+!.env.example
 *.pem
+*.key
+*.keystore
+*.secret
+secrets/
 
 # IDEs & System
 .DS_Store

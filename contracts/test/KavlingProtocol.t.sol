@@ -36,10 +36,11 @@ contract KavlingProtocolTest is Test {
         vm.deal(admin, 50 ether);
     }
 
-    function _signAppraisal(
-        KavlingRegistry.Appraisal memory appraisal,
-        uint256 privateKey
-    ) internal view returns (bytes memory) {
+    function _signAppraisal(KavlingRegistry.Appraisal memory appraisal, uint256 privateKey)
+        internal
+        view
+        returns (bytes memory)
+    {
         bytes32 structHash = keccak256(
             abi.encode(
                 registry.APPRAISAL_TYPEHASH(),
@@ -63,9 +64,7 @@ contract KavlingProtocolTest is Test {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);
@@ -74,9 +73,9 @@ contract KavlingProtocolTest is Test {
     function _setupPropertyAndVault() internal {
         KavlingRegistry.Appraisal memory appraisal = KavlingRegistry.Appraisal({
             propertyId: propertyId,
-            valuationUSD: 500_000 * 1e18,     // $500k USD
-            pricePerFraction: 50 * 1e18,       // $50 per fraction
-            annualYieldBps: 980,               // 9.80% APY
+            valuationUSD: 500_000 * 1e18, // $500k USD
+            pricePerFraction: 50 * 1e18, // $50 per fraction
+            annualYieldBps: 980, // 9.80% APY
             timestamp: block.timestamp,
             nonce: 1,
             deadline: block.timestamp + 1 hours
@@ -294,6 +293,14 @@ contract KavlingProtocolTest is Test {
         // Advance time past 7-day deadline
         vm.warp(block.timestamp + 8 days);
 
+        vm.expectRevert(KavlingPropertyVault.FundingPeriodEnded.selector);
+        vm.prank(investor1);
+        escrowVault.buyWithUSDT(1 * 1e18);
+
+        vm.expectRevert(KavlingPropertyVault.FundingPeriodEnded.selector);
+        vm.prank(investor2);
+        escrowVault.buyWithBNB{value: 1 ether}(1 * 1e18);
+
         // Enable refunds
         escrowVault.enableRefunds();
         assertTrue(escrowVault.state() == KavlingPropertyVault.VaultState.Refundable);
@@ -311,6 +318,50 @@ contract KavlingProtocolTest is Test {
         escrowVault.claimRefund();
         assertGt(investor2.balance, inv2BNBBefore);
         assertEq(escrowVault.balanceOf(investor2), 0);
+    }
+
+    function test_FundingTransfersDisabled() public {
+        bytes32 escrowPropId = keccak256("ESCROW-PROP-TRANSFER-GUARD");
+        KavlingRegistry.Appraisal memory appraisal = KavlingRegistry.Appraisal({
+            propertyId: escrowPropId,
+            valuationUSD: 100_000 * 1e18,
+            pricePerFraction: 10 * 1e18,
+            annualYieldBps: 850,
+            timestamp: block.timestamp,
+            nonce: 1,
+            deadline: block.timestamp + 1 hours
+        });
+
+        vm.startPrank(admin);
+        registry.registerPropertyWithAppraisal(
+            escrowPropId,
+            "Transfer Guard Property",
+            "Bali",
+            "DEMO-TITLE",
+            "ipfs://demo",
+            10_000 * 1e18,
+            appraisal,
+            _signAppraisal(appraisal, appraiserPrivateKey)
+        );
+        KavlingPropertyVault escrowVault = new KavlingPropertyVault(
+            "Transfer Guard Fractions",
+            "KVL-GUARD",
+            escrowPropId,
+            address(registry),
+            address(usdt),
+            10_000 * 1e18,
+            50_000 * 1e18,
+            14
+        );
+        registry.linkVault(escrowPropId, address(escrowVault));
+        vm.stopPrank();
+
+        vm.startPrank(investor1);
+        usdt.approve(address(escrowVault), type(uint256).max);
+        escrowVault.buyWithUSDT(100 * 1e18);
+        vm.expectRevert(KavlingPropertyVault.TransfersDisabledDuringFunding.selector);
+        escrowVault.transfer(investor2, 10 * 1e18);
+        vm.stopPrank();
     }
 
     function test_BuyWithNativeBNB_AndRefundExcess() public {
@@ -371,6 +422,38 @@ contract KavlingProtocolTest is Test {
         vm.prank(investor2);
         vault.claimRentalYield();
         assertEq(usdt.balanceOf(investor2) - inv2USDTBefore, 200 * 1e18);
+    }
+
+    function test_SelfTransferDoesNotDuplicatePendingYield() public {
+        _setupPropertyAndVault();
+
+        vm.startPrank(investor1);
+        usdt.approve(address(vault), type(uint256).max);
+        vault.buyWithUSDT(100 * 1e18);
+        vm.stopPrank();
+
+        usdt.faucet(admin, 1_000 * 1e18);
+        vm.startPrank(admin);
+        usdt.approve(address(vault), 1_000 * 1e18);
+        vault.depositRentalYield(1_000 * 1e18);
+        vault.depositRentalYieldBNB{value: 1 ether}();
+        vm.stopPrank();
+
+        vm.prank(investor1);
+        vault.transfer(investor1, 1 * 1e18);
+
+        assertEq(vault.calculateClaimableYield(investor1), 1_000 * 1e18);
+        assertEq(vault.calculateClaimableYieldBNB(investor1), 1 ether);
+
+        uint256 usdtBefore = usdt.balanceOf(investor1);
+        vm.prank(investor1);
+        vault.claimRentalYield();
+        assertEq(usdt.balanceOf(investor1) - usdtBefore, 1_000 * 1e18);
+
+        uint256 bnbBefore = investor1.balance;
+        vm.prank(investor1);
+        vault.claimRentalYieldBNB();
+        assertEq(investor1.balance - bnbBefore, 1 ether);
     }
 
     function test_DualCurrencyYield_DepositAndClaimBNB() public {

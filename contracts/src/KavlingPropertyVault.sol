@@ -17,7 +17,11 @@ import "./KavlingRegistry.sol";
 contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
-    enum VaultState { Funding, Active, Refundable }
+    enum VaultState {
+        Funding,
+        Active,
+        Refundable
+    }
 
     bytes32 public immutable propertyId;
     KavlingRegistry public immutable registry;
@@ -25,7 +29,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
 
     uint256 public constant PRECISION = 1e18;
     uint256 public constant MIN_PURCHASE_FRACTION = 1e16; // 0.01 fractional token (~$0.50 - $5)
-    
+
     uint256 public immutable maxFractions;
     uint256 public immutable minFundingGoalUSD;
     uint256 public immutable fundingDeadline;
@@ -74,6 +78,8 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
     error InvestorNotVerified();
     error RefundFailed();
     error NoDepositToRefund();
+    error TransfersDisabledDuringFunding();
+    error FundingPeriodEnded();
 
     constructor(
         string memory name,
@@ -84,10 +90,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
         uint256 _maxFractions,
         uint256 _minFundingGoalUSD,
         uint256 _fundingDurationDays
-    ) 
-        ERC20(name, symbol) 
-        Ownable(msg.sender) 
-    {
+    ) ERC20(name, symbol) Ownable(msg.sender) {
         if (_registry == address(0) || _paymentToken == address(0)) revert ZeroAddress();
         propertyId = _propertyId;
         registry = KavlingRegistry(_registry);
@@ -129,6 +132,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
         if (fractionAmount < MIN_PURCHASE_FRACTION) revert BelowMinPurchase();
         if (totalFractionsMinted + fractionAmount > maxFractions) revert MaxSupplyExceeded();
         if (state == VaultState.Refundable) revert VaultNotActive();
+        if (state == VaultState.Funding && block.timestamp > fundingDeadline) revert FundingPeriodEnded();
 
         KavlingRegistry.Property memory prop = registry.getProperty(propertyId);
         if (!prop.isActive) revert VaultNotActive();
@@ -161,6 +165,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
         if (fractionAmount < MIN_PURCHASE_FRACTION) revert BelowMinPurchase();
         if (totalFractionsMinted + fractionAmount > maxFractions) revert MaxSupplyExceeded();
         if (state == VaultState.Refundable) revert VaultNotActive();
+        if (state == VaultState.Funding && block.timestamp > fundingDeadline) revert FundingPeriodEnded();
 
         KavlingRegistry.Property memory prop = registry.getProperty(propertyId);
         if (!prop.isActive) revert VaultNotActive();
@@ -181,14 +186,14 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
             bnbDeposited[msg.sender] += costBNB;
         } else {
             // Vault already Active: transfer to property issuer
-            (bool sentOwner, ) = payable(owner()).call{value: costBNB}("");
+            (bool sentOwner,) = payable(owner()).call{value: costBNB}("");
             require(sentOwner, "BNB transfer to owner failed");
         }
 
         // Refund any excess payment back to the buyer immediately
         uint256 excess = msg.value - costBNB;
         if (excess > 0) {
-            (bool sentRefund, ) = payable(msg.sender).call{value: excess}("");
+            (bool sentRefund,) = payable(msg.sender).call{value: excess}("");
             if (!sentRefund) revert RefundFailed();
         }
 
@@ -214,7 +219,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
 
         uint256 bnbBal = address(this).balance;
         if (bnbBal > 0) {
-            (bool sent, ) = payable(owner()).call{value: bnbBal}("");
+            (bool sent,) = payable(owner()).call{value: bnbBal}("");
             require(sent, "BNB release failed");
         }
     }
@@ -255,7 +260,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
         }
 
         if (bnbRefund > 0) {
-            (bool sent, ) = payable(msg.sender).call{value: bnbRefund}("");
+            (bool sent,) = payable(msg.sender).call{value: bnbRefund}("");
             if (!sent) revert RefundFailed();
         }
 
@@ -296,7 +301,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
     function calculateClaimableYield(address investor) public view returns (uint256) {
         uint256 balance = balanceOf(investor);
         uint256 accumulated = (balance * accYieldPerShare) / PRECISION;
-        
+
         uint256 currentPeriodYield = 0;
         if (accumulated >= rewardDebt[investor]) {
             currentPeriodYield = accumulated - rewardDebt[investor];
@@ -311,7 +316,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
     function calculateClaimableYieldBNB(address investor) public view returns (uint256) {
         uint256 balance = balanceOf(investor);
         uint256 accumulated = (balance * accYieldPerShareBNB) / PRECISION;
-        
+
         uint256 currentPeriodYield = 0;
         if (accumulated >= rewardDebtBNB[investor]) {
             currentPeriodYield = accumulated - rewardDebtBNB[investor];
@@ -345,7 +350,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
         pendingYieldBNB[msg.sender] = 0;
         rewardDebtBNB[msg.sender] = (balanceOf(msg.sender) * accYieldPerShareBNB) / PRECISION;
 
-        (bool sent, ) = payable(msg.sender).call{value: claimable}("");
+        (bool sent,) = payable(msg.sender).call{value: claimable}("");
         require(sent, "BNB yield transfer failed");
 
         emit RentalYieldClaimedBNB(msg.sender, claimable);
@@ -356,6 +361,13 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
      * Settles pending yield on both USDT and BNB before state mutation, then updates debt.
      */
     function _update(address from, address to, uint256 value) internal override {
+        // Fractions remain non-transferable until the funding outcome is known.
+        // Without this gate, a buyer could transfer tokens away and still claim
+        // the original deposit, leaving the recipient with unrefundable tokens.
+        if (from != address(0) && to != address(0) && state != VaultState.Active) {
+            revert TransfersDisabledDuringFunding();
+        }
+
         // Settle pending yield on USDT
         if (from != address(0)) {
             uint256 fromAccumulated = (balanceOf(from) * accYieldPerShare) / PRECISION;
@@ -368,7 +380,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
             }
         }
 
-        if (to != address(0)) {
+        if (to != address(0) && to != from) {
             uint256 toAccumulated = (balanceOf(to) * accYieldPerShare) / PRECISION;
             if (toAccumulated >= rewardDebt[to]) {
                 pendingYield[to] += toAccumulated - rewardDebt[to];

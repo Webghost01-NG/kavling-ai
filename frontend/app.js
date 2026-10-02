@@ -1,361 +1,567 @@
-/**
- * Kavling AI - Protocol Frontend Controller
- * Zero-dependency pure ES module with live EIP-712 inspector and judge simulator.
- */
+import { ethers } from "https://esm.sh/ethers@6.15.0";
+import { artifacts } from "./deploy/manifest.js";
+import { deployment } from "./deployment.js";
 
-const DICTIONARY = {
-  en: {
-    heroSub: "Indonesia Web3 Hackathon 2026 • BNB Chain",
-    heroTitle: "Autonomous Real Estate Tokenization Protocol",
-    heroDesc: "Empowering Indonesian real estate with autonomous AI valuation agents, BMKG seismic risk scoring, and zero-underflow fractional yield on BNB Chain.",
-    statVolume: "Total Volume Appraised",
-    statInvestors: "Verified Investors",
-    statYield: "Avg Rental APY",
-    statSecurity: "Escrow Protocol",
-    marketTitle: "Curated Indonesian Real Estate",
-    marketDesc: "Institutional-grade villas, commercial towers, and cultural heritage assets on BNB Chain.",
-    studioTitle: "AI Automated Valuation Studio",
-    studioDesc: "Simulate hedonic regression and BMKG seismic fault line scoring in real-time.",
-    proofTitle: "EIP-712 Cryptographic Proof Inspector",
-    proofDesc: "On-chain verifiable valuation digest signed by the Kavling AI oracle agent.",
-    portfolioTitle: "Investor Portfolio & Dual Yield",
-    portfolioDesc: "Claim streaming rental earnings in USDT or native tBNB with zero underflow risk.",
-    judgeTitle: "Interactive Hackathon Judge Sandbox",
-    judgeDesc: "Simulate the complete end-to-end tokenization and yield lifecycle in 5 seconds.",
-    calcBtn: "Run AI Appraisal",
-    buyBtn: "Purchase Fractions",
-    claimUsdt: "Claim USDT Yield",
-    claimBnb: "Claim tBNB Yield",
-    runJudge: "Execute 1-Click Judge Simulation",
-    connectWallet: "Connect Wallet",
-    langToggle: "Bahasa Indonesia",
-  },
-  id: {
-    heroSub: "Indonesia Web3 Hackathon 2026 • BNB Chain",
-    heroTitle: "Protokol Tokenisasi Properti Otonom",
-    heroDesc: "Merevolusi properti Indonesia dengan valuasi AI otonom, pemodelan risiko seismik BMKG, dan imbal hasil fraksional tanpa risiko underflow di BNB Chain.",
-    statVolume: "Total Volume Dinilai",
-    statInvestors: "Investor Terverifikasi",
-    statYield: "Rata-rata APY Sewa",
-    statSecurity: "Protokol Escrow",
-    marketTitle: "Properti Pilihan di Indonesia",
-    marketDesc: "Villa premium, gedung komersial, dan aset warisan budaya terfraksionalisasi di BNB Chain.",
-    studioTitle: "Studio Valuasi Otomatis AI (AVM)",
-    studioDesc: "Simulasi regresi hedonik dan skor risiko sesar aktif BMKG secara langsung.",
-    proofTitle: "Inspektor Bukti Kriptografi EIP-712",
-    proofDesc: "Digest valuasi yang diverifikasi on-chain dan ditandatangani agen oracle Kavling AI.",
-    portfolioTitle: "Portofolio & Imbal Hasil Ganda",
-    portfolioDesc: "Klaim pendapatan sewa dalam USDT atau native tBNB tanpa risiko underflow matematika.",
-    judgeTitle: "Sandbox Simulasi Juri Hackathon",
-    judgeDesc: "Jalankan siklus lengkap tokenisasi dan imbal hasil secara interaktif dalam 5 detik.",
-    calcBtn: "Hitung Valuasi AI",
-    buyBtn: "Beli Fraksi Properti",
-    claimUsdt: "Klaim Hasil USDT",
-    claimBnb: "Klaim Hasil tBNB",
-    runJudge: "Jalankan Simulasi Juri (1-Klik)",
-    connectWallet: "Sambungkan Wallet",
-    langToggle: "English",
-  }
-};
+const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ? "http://localhost:8000"
+  : deployment.agentUrl || null;
+const RPC = new ethers.JsonRpcProvider(deployment.rpcUrl, deployment.chainId);
+const REGISTRY_ABI = artifacts.KavlingRegistry.abi;
+const VAULT_ABI = artifacts.KavlingPropertyVault.abi;
+const TOKEN_ABI = artifacts.MockUSDT.abi;
+const registryRead = new ethers.Contract(deployment.contracts.registry, REGISTRY_ABI, RPC);
+const vaultRead = new ethers.Contract(deployment.contracts.vault, VAULT_ABI, RPC);
+const tokenRead = new ethers.Contract(deployment.contracts.mockUsdt, TOKEN_ABI, RPC);
+const $ = (id) => document.getElementById(id);
 
-let currentLang = "en";
-let userWallet = null;
-let currentAppraisal = null;
-
-const DEFAULT_PROPERTIES = [
-  {
-    id: "0x4b41564c494e472d42414c492d30310000000000000000000000000000000000",
-    name: "Canggu Sanctuary Eco-Villa",
-    city: "Bali",
-    district: "Canggu",
-    category: "Hospitality & Tourism",
-    deed: "SHM-0892-BALI-BADUNG",
-    valuation: 750000,
-    fractionPrice: 50.00,
-    yieldAPY: 9.80,
-    fractions: 15000,
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80"
-  },
-  {
-    id: "0x4b41564c494e472d4a414b415254412d30320000000000000000000000000000",
-    name: "SCBD Pacific Executive Penthouse",
-    city: "Jakarta",
-    district: "SCBD",
-    category: "Commercial Grade A",
-    deed: "HGB-1102-JKT-SELATAN",
-    valuation: 1200000,
-    fractionPrice: 50.00,
-    yieldAPY: 8.40,
-    fractions: 24000,
-    image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80"
-  },
-  {
-    id: "0x4b41564c494e472d4a4f474a412d303300000000000000000000000000000000",
-    name: "Malioboro Heritage Boutique Suites",
-    city: "Yogyakarta",
-    district: "Malioboro",
-    category: "Cultural Heritage Tourism",
-    deed: "SHM-4421-DIY-YOGYA",
-    valuation: 450000,
-    fractionPrice: 50.00,
-    yieldAPY: 10.50,
-    fractions: 9000,
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80"
-  }
+const PROPERTY_SCENARIOS = [
+  { name: "Canggu Sanctuary", city: "Bali", district: "Canggu", type: "Hospitality", value: 750000, fraction: 50, yield: 9.8 },
+  { name: "SCBD Executive", city: "Jakarta", district: "SCBD", type: "Commercial", value: 1200000, fraction: 50, yield: 8.4 },
+  { name: "Malioboro Heritage", city: "Yogyakarta", district: "Malioboro", type: "Hospitality", value: 450000, fraction: 50, yield: 10.5 },
 ];
+const REGIONS = {
+  Bali: { land: 1200, demand: 1.45, fault: "Sunda Megathrust Arc", resilience: 95.2 },
+  Jakarta: { land: 4500, demand: 1.10, fault: "Baribis Fault & Subsidence Zone", resilience: 91.1 },
+  Yogyakarta: { land: 1400, demand: 1.30, fault: "Opak Strike-Slip Fault", resilience: 94.6 },
+  Bandung: { land: 1100, demand: 1.25, fault: "Lembang Active Fault", resilience: 92.8 },
+};
+const ZONING = { Pariwisata: { value: 1.15, yield: 180 }, Komersial: { value: 1.10, yield: 120 }, Residensial: { value: 1, yield: 0 }, Pertanian: { value: .70, yield: -200 } };
+const TITLES = { SHM: 1, HGB: .92, "Hak Pakai": .85 };
+let walletProvider;
+let walletSigner;
+let userWallet = null;
+let registryWrite;
+let vaultWrite;
+let tokenWrite;
+let liveProperty;
+let appraiserAddress;
+let latestProof;
+let latestProofPropertyId;
+let transactionPending = false;
 
-// Initialize on DOM load
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", initialize);
+
+function initialize() {
   renderProperties();
-  runDefaultAppraisal();
-  setupEventListeners();
-  updateLanguageUI();
-});
+  $("appraisal-form").addEventListener("submit", handleAppraisalSubmit);
+  $("wallet-btn").addEventListener("click", handleWalletConnect);
+  $("publish-appraisal-button").addEventListener("click", publishAppraisal);
+  $("faucet-button").addEventListener("click", requestTestTokens);
+  $("buy-usdt-button").addEventListener("click", buyWithUSDT);
+  $("buy-bnb-button").addEventListener("click", buyWithBNB);
+  $("finalize-button").addEventListener("click", finalizeFunding);
+  $("deposit-yield-button").addEventListener("click", depositTestYield);
+  $("deposit-bnb-yield-button").addEventListener("click", depositBnbYield);
+  $("claim-usdt-button").addEventListener("click", claimUsdtYield);
+  $("claim-bnb-button").addEventListener("click", claimBnbYield);
+  $("dismiss-wallet-notice").addEventListener("click", () => { $("wallet-notice").hidden = true; });
+  setWalletControls(false);
+  setContractLinks();
+  loadLiveState();
+  $("appraisal-form").dispatchEvent(new Event("submit"));
 
-function setupEventListeners() {
-  document.getElementById("lang-toggle").addEventListener("click", toggleLanguage);
-  document.getElementById("wallet-btn").addEventListener("click", handleWalletConnect);
-  document.getElementById("appraisal-form").addEventListener("submit", handleAppraisalSubmit);
-  document.getElementById("judge-sim-btn").addEventListener("click", handleJudgeSimulation);
-  document.getElementById("claim-usdt-btn").addEventListener("click", () => claimYield("USDT"));
-  document.getElementById("claim-bnb-btn").addEventListener("click", () => claimYield("tBNB"));
-}
-
-function toggleLanguage() {
-  currentLang = currentLang === "en" ? "id" : "en";
-  updateLanguageUI();
-}
-
-function updateLanguageUI() {
-  const d = DICTIONARY[currentLang];
-  document.getElementById("lang-toggle").textContent = d.langToggle;
-  document.getElementById("hero-sub").textContent = d.heroSub;
-  document.getElementById("hero-title").textContent = d.heroTitle;
-  document.getElementById("hero-desc").textContent = d.heroDesc;
-  document.getElementById("lbl-vol").textContent = d.statVolume;
-  document.getElementById("lbl-inv").textContent = d.statInvestors;
-  document.getElementById("lbl-yield").textContent = d.statYield;
-  document.getElementById("lbl-sec").textContent = d.statSecurity;
-  document.getElementById("market-title").textContent = d.marketTitle;
-  document.getElementById("market-desc").textContent = d.marketDesc;
-  document.getElementById("studio-title").textContent = d.studioTitle;
-  document.getElementById("studio-desc").textContent = d.studioDesc;
-  document.getElementById("proof-title").textContent = d.proofTitle;
-  document.getElementById("proof-desc").textContent = d.proofDesc;
-  document.getElementById("portfolio-title").textContent = d.portfolioTitle;
-  document.getElementById("portfolio-desc").textContent = d.portfolioDesc;
-  document.getElementById("judge-title").textContent = d.judgeTitle;
-  document.getElementById("judge-desc").textContent = d.judgeDesc;
-  document.getElementById("calc-submit-btn").textContent = d.calcBtn;
-  document.getElementById("claim-usdt-btn").textContent = d.claimUsdt;
-  document.getElementById("claim-bnb-btn").textContent = d.claimBnb;
-  document.getElementById("judge-sim-btn").textContent = d.runJudge;
-  if (!userWallet) {
-    document.getElementById("wallet-btn").textContent = d.connectWallet;
+  if (window.ethereum?.on) {
+    window.ethereum.on("chainChanged", (chainId) => {
+      if (walletSigner && chainId?.toLowerCase() !== `0x${deployment.chainId.toString(16)}`) {
+        clearWalletConnection("Wallet network changed. Reconnect on BNB Smart Chain Testnet to continue.");
+      }
+    });
+    window.ethereum.on("accountsChanged", (accounts) => {
+      if (walletSigner && (!accounts?.length || accounts[0]?.toLowerCase() !== userWallet?.toLowerCase())) {
+        clearWalletConnection("Wallet account changed. Reconnect to confirm the account you want to use.");
+      }
+    });
+    window.ethereum.on("disconnect", () => {
+      if (walletSigner) clearWalletConnection("Wallet provider disconnected. Reconnect your wallet and try again.");
+    });
   }
 }
 
 function renderProperties() {
-  const container = document.getElementById("property-list");
-  container.innerHTML = "";
-
-  DEFAULT_PROPERTIES.forEach((p, idx) => {
-    const card = document.createElement("div");
-    card.className = `prop-card ${idx === 0 ? "active" : ""}`;
-    card.onclick = () => selectProperty(p, card);
-    card.innerHTML = `
-      <img src="${p.image}" class="prop-img" alt="${p.name}" />
-      <div class="prop-content">
-        <div class="prop-tags">
-          <span class="prop-badge">${p.city}</span>
-          <span class="prop-badge">${p.category}</span>
-        </div>
-        <div class="prop-name">${p.name}</div>
-        <div style="font-size:0.75rem; color:#9CA3AF;">Deed: ${p.deed}</div>
-        <div class="prop-metrics">
-          <div>
-            <div style="color:#9CA3AF; font-size:0.7rem;">VALUATION</div>
-            <strong>$${p.valuation.toLocaleString()}</strong>
-          </div>
-          <div>
-            <div style="color:#9CA3AF; font-size:0.7rem;">FRACTION</div>
-            <strong style="color:#F0B90B;">$${p.fractionPrice.toFixed(2)}</strong>
-          </div>
-          <div>
-            <div style="color:#9CA3AF; font-size:0.7rem;">EST. APY</div>
-            <strong style="color:#34D399;">${p.yieldAPY}%</strong>
-          </div>
-        </div>
-      </div>
-    `;
+  const container = $("property-list");
+  PROPERTY_SCENARIOS.forEach((property) => {
+    const card = document.createElement("article");
+    card.className = "listing";
+    card.innerHTML = `<div><div class="listing-title">${property.name}</div><div class="listing-meta">${property.city} · ${property.district} · ${property.type}</div></div><span class="listing-badge">DEMO SCENARIO</span><div class="listing-metrics"><span>Seeded value <strong>$${property.value.toLocaleString()}</strong></span><span>Seeded fraction <strong>$${property.fraction}</strong></span><span>Seeded yield <strong>${property.yield}%</strong></span></div>`;
+    card.addEventListener("click", () => selectScenario(property));
     container.appendChild(card);
   });
 }
 
-function selectProperty(prop, cardElement) {
-  document.querySelectorAll(".prop-card").forEach(c => c.classList.remove("active"));
-  if (cardElement) cardElement.classList.add("active");
-
-  document.getElementById("inp-city").value = prop.city;
-  document.getElementById("inp-land").value = prop.city === "Bali" ? 500 : prop.city === "Jakarta" ? 120 : 480;
-  document.getElementById("inp-build").value = prop.city === "Bali" ? 350 : prop.city === "Jakarta" ? 260 : 520;
-  
-  handleAppraisalSubmit(new Event("submit"));
+function selectScenario(property) {
+  $("inp-city").value = property.city;
+  $("inp-land").value = property.city === "Jakarta" ? 120 : property.city === "Yogyakarta" ? 480 : 500;
+  $("inp-build").value = property.city === "Jakarta" ? 260 : property.city === "Yogyakarta" ? 520 : 350;
+  $("appraisal-form").dispatchEvent(new Event("submit"));
+  $("valuation").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-async function handleAppraisalSubmit(e) {
-  if (e && e.preventDefault) e.preventDefault();
-
-  const city = document.getElementById("inp-city").value;
-  const landArea = parseFloat(document.getElementById("inp-land").value) || 500;
-  const buildArea = parseFloat(document.getElementById("inp-build").value) || 350;
-  const zoning = document.getElementById("inp-zoning").value;
-  const title = document.getElementById("inp-title").value;
-
-  // Try fetching from local FastAPI backend; fallback to built-in mathematical engine
+async function handleAppraisalSubmit(event) {
+  event.preventDefault();
+  const params = {
+    city: $("inp-city").value,
+    land: Number($("inp-land").value),
+    building: Number($("inp-build").value),
+    zoning: $("inp-zoning").value,
+    title: $("inp-title").value,
+  };
+  const district = districtFor(params.city);
+  const propertyId = params.city === "Bali"
+    ? deployment.propertyId
+    : ethers.keccak256(ethers.toUtf8Bytes(`KAVLING-DEMO-${params.city}-${district}`));
+  const button = $("calc-submit-btn");
+  button.disabled = true;
+  button.firstChild.textContent = "Calculating… ";
+  latestProof = null;
+  latestProofPropertyId = propertyId;
+  $("publish-appraisal-button").disabled = true;
+  $("proof-action-status").textContent = "Waiting for the valuation service.";
   try {
-    const res = await fetch("http://localhost:8000/api/appraise", {
+    if (!API_URL) {
+      displayAppraisal(localEstimate(params), null, "Local estimate · unsigned · hosted agent is not configured", propertyId);
+      return;
+    }
+    const response = await fetchWithTimeout(`${API_URL}/api/appraise`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        city,
-        district: city === "Bali" ? "Canggu" : city === "Jakarta" ? "SCBD" : "Malioboro",
-        land_area_m2: landArea,
-        building_area_m2: buildArea,
-        zoning,
-        title,
-        nonce: 1
-      })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      displayAppraisal(data.appraisal, data.eip712_proof);
-      return;
-    }
-  } catch (err) {
-    // Offline / fallback mode
+        property_id: propertyId,
+        city: params.city,
+        district,
+        land_area_m2: params.land,
+        building_area_m2: params.building,
+        zoning: params.zoning,
+        title: params.title,
+        chain_id: deployment.chainId,
+        verifying_contract: deployment.contracts.registry,
+      }),
+    }, 12000);
+    if (!response.ok) throw new Error(`valuation agent returned ${response.status}`);
+    const data = await response.json();
+    latestProof = data.eip712_proof;
+    displayAppraisal(data.appraisal, latestProof, "Valuation agent · EIP-712 proof", propertyId);
+  } catch (error) {
+    const source = error.name === "AbortError" ? "timed out" : shortError(error);
+    displayAppraisal(localEstimate(params), null, `Local estimate · unsigned · agent unavailable (${source})`, propertyId);
+  } finally {
+    button.disabled = false;
+    button.firstChild.textContent = "Run valuation ";
   }
+}
 
-  // Pure client-side mathematical fallback
-  const baseRate = city === "Bali" ? 1200 : city === "Jakarta" ? 4500 : 1400;
-  const zoneMult = zoning === "Pariwisata" ? 1.15 : zoning === "Komersial" ? 1.10 : 1.0;
-  const titleMult = title === "SHM" ? 1.0 : 0.92;
-  const estValuation = Math.round((landArea * baseRate * zoneMult * titleMult + buildArea * 700) / 1000) * 1000;
-  const yieldAPY = zoning === "Pariwisata" ? 9.80 : 8.50;
+function localEstimate({ city, land, building, zoning, title }) {
+  const region = REGIONS[city] || REGIONS.Bali;
+  const zone = ZONING[zoning] || ZONING.Residensial;
+  const titleFactor = TITLES[title] || 1;
+  const value = Math.round((land * region.land * zone.value * titleFactor + building * 700) / 1000) * 1000;
+  const yieldPercent = Math.max(5.5, Math.min(14.5, 7.5 + (region.demand - 1) * 8 + zone.yield / 100));
+  return { valuation_usd: value, price_per_fraction_usd: value / 10000, annual_yield_percent: Number(yieldPercent.toFixed(2)), risk_assessment: { active_fault_zone: region.fault, resilience_score: region.resilience } };
+}
 
-  const mockAppraisal = {
-    city,
-    valuation_usd: estValuation,
-    price_per_fraction_usd: estValuation / 10000,
-    annual_yield_percent: yieldAPY,
-    risk_assessment: {
-      active_fault_zone: city === "Bali" ? "Sunda Megathrust Arc" : city === "Jakarta" ? "Baribis Fault" : "Opak Strike-Slip Fault",
-      seismic_pga_g: 0.28,
-      resilience_score: 95.2,
-      structural_grade: "A"
+function displayAppraisal(appraisal, proof, source, propertyId) {
+  $("res-val").textContent = money(appraisal.valuation_usd);
+  $("res-fraction").textContent = money(appraisal.price_per_fraction_usd);
+  $("res-yield").textContent = `${appraisal.annual_yield_percent}%`;
+  $("res-resilience").textContent = `${appraisal.risk_assessment.resilience_score} / 100`;
+  $("appraisal-source").textContent = source;
+  const proofStatus = $("proof-status");
+  const proofBox = $("eip-proof-box");
+  if (proof) {
+    const publishable = proofTargetsDeployedProperty(proof, propertyId);
+    proofStatus.textContent = publishable ? "Signed appraisal proof" : "Signed · not this property";
+    proofBox.textContent = JSON.stringify({
+      domain: { name: "KavlingRegistry", chainId: proof.chain_id, verifyingContract: proof.verifying_contract },
+      message: proof.struct,
+      signer: proof.appraiser_agent,
+      signature: proof.signature,
+    }, null, 2);
+    if (!publishable) {
+      $("proof-action-status").textContent = "Only the deployed Bali/Canggu demo property can be updated here; other regions remain signed estimates.";
+    } else {
+      $("proof-action-status").textContent = "Checking the signature against the deployed appraiser and wallet connection…";
     }
-  };
-
-  const mockProof = {
-    appraiser_agent: "0xA11CE8836F83199D6985C13E77c22998379B22c1",
-    nonce: 1,
-    signature: "0x89f81cbda78e58a2d1d0c153833cbef178385bb4a794025f1906e57929497e2f5b849204bf377196238bcadbc073e5ff01e858bf4e772280d94101e403d52d9a1c",
-    verifying_contract: "0x34A1F67104b4c73fE0bB0e8a86776Ec17c5b62bF"
-  };
-
-  displayAppraisal(mockAppraisal, mockProof);
-}
-
-function runDefaultAppraisal() {
-  handleAppraisalSubmit(new Event("submit"));
-}
-
-function displayAppraisal(appraisal, proof) {
-  currentAppraisal = { appraisal, proof };
-  document.getElementById("res-val").textContent = `$${appraisal.valuation_usd.toLocaleString()}`;
-  document.getElementById("res-fraction").textContent = `$${appraisal.price_per_fraction_usd.toFixed(2)}`;
-  document.getElementById("res-yield").textContent = `${appraisal.annual_yield_percent}%`;
-  document.getElementById("res-fault").textContent = appraisal.risk_assessment.active_fault_zone;
-  document.getElementById("res-resilience").textContent = `${appraisal.risk_assessment.resilience_score} / 100`;
-
-  const proofJson = {
-    domain: {
-      name: "KavlingRegistry",
-      version: "1.0.0",
-      chainId: 97,
-      verifyingContract: proof.verifying_contract
-    },
-    message: {
-      propertyId: "0x4b41564c494e47...00",
-      valuationUSD: `$${appraisal.valuation_usd.toLocaleString()}`,
-      nonce: proof.nonce,
-      deadline: Math.floor(Date.now() / 1000) + 86400
-    },
-    appraiserAgent: proof.appraiser_agent,
-    signature: proof.signature
-  };
-
-  document.getElementById("eip-proof-box").textContent = JSON.stringify(proofJson, null, 2);
+  } else {
+    proofStatus.textContent = "Unsigned estimate";
+    proofBox.textContent = JSON.stringify({ status: "local_estimate", note: "No signature was generated because the valuation agent is unavailable.", valuationUSD: appraisal.valuation_usd, riskAssessment: appraisal.risk_assessment }, null, 2);
+    $("proof-action-status").textContent = "This estimate has no cryptographic signature and cannot be submitted.";
+  }
+  refreshProofAction();
 }
 
 async function handleWalletConnect() {
-  if (window.ethereum) {
-    try {
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      userWallet = accounts[0];
-      const shortAddr = `${userWallet.slice(0, 6)}...${userWallet.slice(-4)}`;
-      document.getElementById("wallet-btn").textContent = shortAddr;
-      document.getElementById("user-addr-display").textContent = shortAddr;
-      alert(`Connected to BNB Chain: ${userWallet}`);
-    } catch (e) {
-      console.warn("Wallet connection rejected:", e);
+  if (!window.ethereum) {
+    setNetworkStatus("WALLET REQUIRED", true);
+    showWalletNotice("MetaMask or another compatible EVM wallet is required.", "error");
+    return;
+  }
+  const button = $("wallet-btn");
+  button.disabled = true;
+  button.textContent = "Waiting for wallet…";
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    if (!Array.isArray(accounts) || accounts.length === 0) throw new Error("The wallet did not share an account.");
+    await ensureTestnet();
+    const currentChain = await window.ethereum.request({ method: "eth_chainId" });
+    if (currentChain.toLowerCase() !== `0x${deployment.chainId.toString(16)}`) {
+      throw new Error("Wallet is not connected to BNB Smart Chain Testnet (chain 97).");
     }
-  } else {
-    // Simulated wallet for evaluator
-    userWallet = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
-    const shortAddr = "0x7099...79C8";
-    document.getElementById("wallet-btn").textContent = shortAddr;
-    document.getElementById("user-addr-display").textContent = shortAddr;
-    alert("Interactive Simulation Wallet Active (Chain ID 97 - BSC Testnet)");
+    const nextProvider = new ethers.BrowserProvider(window.ethereum);
+    const nextSigner = await nextProvider.getSigner();
+    const nextAddress = await nextSigner.getAddress();
+    walletProvider = nextProvider;
+    walletSigner = nextSigner;
+    userWallet = nextAddress;
+    registryWrite = new ethers.Contract(deployment.contracts.registry, REGISTRY_ABI, nextSigner);
+    vaultWrite = new ethers.Contract(deployment.contracts.vault, VAULT_ABI, nextSigner);
+    tokenWrite = new ethers.Contract(deployment.contracts.mockUsdt, TOKEN_ABI, nextSigner);
+    button.textContent = `${userWallet.slice(0, 6)}…${userWallet.slice(-4)}`;
+    setNetworkStatus("BSC TESTNET · WALLET READY");
+    showWalletNotice(`Connected to BNB Smart Chain Testnet as ${userWallet.slice(0, 6)}…${userWallet.slice(-4)}. Transactions require your approval in the wallet.`, "success");
+    setWalletControls(true);
+    await loadLiveState();
+    refreshProofAction();
+  } catch (error) {
+    walletProvider = undefined;
+    walletSigner = undefined;
+    userWallet = null;
+    registryWrite = undefined;
+    vaultWrite = undefined;
+    tokenWrite = undefined;
+    button.textContent = "Connect wallet";
+    setWalletControls(false);
+    const message = error?.code === 4001
+      ? "Wallet request cancelled. No account was connected and no transaction was sent."
+      : error?.code === 4900 || error?.code === 4901
+        ? "Wallet provider disconnected. Reconnect your wallet and try again."
+        : `Wallet connection failed: ${shortError(error)}`;
+    setNetworkStatus("WALLET NOT CONNECTED", true);
+    showWalletNotice(message, "error");
+  } finally {
+    button.disabled = false;
   }
 }
 
-function claimYield(currency) {
-  const alertMsg = currentLang === "en" 
-    ? `Successfully claimed ${currency === "USDT" ? "$125.00 USDT" : "0.208 tBNB"} with zero-underflow accrual math!`
-    : `Berhasil mengklaim imbal hasil ${currency === "USDT" ? "$125.00 USDT" : "0.208 tBNB"} ke wallet Anda!`;
-  alert(alertMsg);
-  if (currency === "USDT") {
-    document.getElementById("pending-usdt").textContent = "$0.00";
-  } else {
-    document.getElementById("pending-bnb").textContent = "0.000 tBNB";
+async function ensureTestnet() {
+  const targetChain = `0x${deployment.chainId.toString(16)}`;
+  const currentChain = await window.ethereum.request({ method: "eth_chainId" });
+  if (currentChain.toLowerCase() === targetChain) return;
+  try {
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: targetChain }] });
+  } catch (error) {
+    if (error.code !== 4902) throw error;
+    await window.ethereum.request({
+      method: "wallet_addEthereumChain",
+      params: [{
+        chainId: targetChain,
+        chainName: deployment.network,
+        nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
+        rpcUrls: [deployment.rpcUrl],
+        blockExplorerUrls: [deployment.explorerUrl],
+      }],
+    });
   }
+  const switchedChain = await window.ethereum.request({ method: "eth_chainId" });
+  if (switchedChain.toLowerCase() !== targetChain) throw new Error("Network switch was not completed. Select BNB Smart Chain Testnet (chain 97) in your wallet.");
 }
 
-function handleJudgeSimulation() {
-  const steps = [
-    "Step 1/5: Investor KYC compliance verified against Indonesian Bappebti & OJK sandbox.",
-    "Step 2/5: AI Agent computes hedonic & BMKG seismic risk score -> Signs EIP-712 proof with nonce replay protection.",
-    "Step 3/5: Investor purchases 50 KVL fractions in Soft-Cap Escrow vault via native tBNB rail.",
-    "Step 4/5: Physical tenant rental yield streamed directly into vault in USDT & tBNB.",
-    "Step 5/5: Investor claims accumulated yield. Mathematical invariant verified: ZERO UNDERFLOW."
-  ];
-
-  let currentStep = 0;
-  const statusEl = document.getElementById("judge-status");
-  statusEl.style.display = "block";
-  statusEl.textContent = steps[0];
-
-  const interval = setInterval(() => {
-    currentStep++;
-    if (currentStep < steps.length) {
-      statusEl.textContent = steps[currentStep];
+async function loadLiveState() {
+  try {
+    const [property, vaultState, raised, goal, minted, maxFractions, bnbPrice, appraiser] = await Promise.all([
+      registryRead.getProperty(deployment.propertyId),
+      vaultRead.state(),
+      vaultRead.totalUSDCollected(),
+      vaultRead.minFundingGoalUSD(),
+      vaultRead.totalFractionsMinted(),
+      vaultRead.maxFractions(),
+      vaultRead.bnbPriceUSD(),
+      registryRead.aiAppraiserAgent(),
+    ]);
+    liveProperty = property;
+    appraiserAddress = appraiser;
+    const stateNames = ["Funding", "Active", "Refundable"];
+    const stateName = stateNames[Number(vaultState)] || "Unknown";
+    $("live-status").textContent = "BSC TESTNET · LIVE READ";
+    $("live-status").className = "panel-status good";
+    $("live-vault-state").textContent = stateName;
+    $("metric-vault-state").textContent = stateName.toUpperCase();
+    $("live-funding-raised").textContent = money(Number(ethers.formatUnits(raised, 18)));
+    $("live-funding-goal").textContent = money(Number(ethers.formatUnits(goal, 18)));
+    $("live-price").textContent = money(Number(ethers.formatUnits(property.pricePerFraction, 18)));
+    $("live-fractions").textContent = `${formatUnits(minted)} / ${formatUnits(maxFractions)}`;
+    $("live-state-note").textContent = `${deployment.propertyName}. Current property value: ${money(Number(ethers.formatUnits(property.valuationUSD, 18)))}. Fixed demo BNB/USD input: ${money(Number(ethers.formatUnits(bnbPrice, 18)))}.`;
+    if (userWallet) {
+      const [fractions, tokenBalance, claimableUsdt, claimableBnb] = await Promise.all([
+        vaultRead.balanceOf(userWallet),
+        tokenRead.balanceOf(userWallet),
+        vaultRead.calculateClaimableYield(userWallet),
+        vaultRead.calculateClaimableYieldBNB(userWallet),
+      ]);
+      $("live-user-fractions").textContent = formatUnits(fractions);
+      $("faucet-button").title = `MockUSDT balance: ${formatUnits(tokenBalance)}`;
+      $("faucet-button").disabled = false;
+      $("deposit-yield-button").disabled = false;
+      $("deposit-bnb-yield-button").disabled = false;
+      $("claim-usdt-button").disabled = !walletSigner || claimableUsdt === 0n;
+      $("claim-bnb-button").disabled = !walletSigner || claimableBnb === 0n;
     } else {
-      clearInterval(interval);
-      statusEl.textContent = "Simulation Complete: 100% Invariants Verified & Audit Passed!";
-      document.getElementById("pending-usdt").textContent = "$125.00";
-      document.getElementById("pending-bnb").textContent = "0.208 tBNB";
-      document.getElementById("user-fractions").textContent = "50 KVL-BALI";
+      $("live-user-fractions").textContent = "Connect wallet";
+      $("claim-usdt-button").disabled = true;
+      $("claim-bnb-button").disabled = true;
     }
-  }, 1000);
+    const canFinalize = Number(vaultState) === 0 && raised >= goal;
+    $("finalize-button").disabled = !walletSigner || !canFinalize;
+    setNetworkStatus(userWallet ? "BSC TESTNET · WALLET READY" : "BSC TESTNET · CONTRACTS LIVE");
+    refreshProofAction();
+  } catch (error) {
+    $("live-status").textContent = "RPC READ FAILED";
+    $("live-status").className = "panel-status error";
+    $("metric-vault-state").textContent = "ERROR";
+    $("live-state-note").textContent = `Could not read the deployed contracts: ${shortError(error)}`;
+    setNetworkStatus("TESTNET RPC ERROR", true);
+  }
+}
+
+function setContractLinks() {
+  for (const [id, address] of [
+    ["registry-link", deployment.contracts.registry],
+    ["vault-link", deployment.contracts.vault],
+    ["token-link", deployment.contracts.mockUsdt],
+  ]) {
+    const link = $(id);
+    link.href = `${deployment.explorerUrl}/address/${address}`;
+    link.title = address;
+  }
+}
+
+async function publishAppraisal() {
+  if (!latestProof || !registryWrite || latestProofPropertyId.toLowerCase() !== deployment.propertyId.toLowerCase()) return;
+  try {
+    const nonce = await registryRead.propertyNonces(deployment.propertyId);
+    if (BigInt(latestProof.nonce) !== nonce + 1n) {
+      $("proof-action-status").textContent = "This proof is stale because the on-chain nonce changed. Run the valuation again.";
+      $("publish-appraisal-button").disabled = true;
+      return;
+    }
+    const s = latestProof.struct;
+    const appraisal = {
+      propertyId: s.propertyId,
+      valuationUSD: BigInt(s.valuationUSD),
+      pricePerFraction: BigInt(s.pricePerFraction),
+      annualYieldBps: BigInt(s.annualYieldBps),
+      timestamp: BigInt(s.timestamp),
+      nonce: BigInt(s.nonce),
+      deadline: BigInt(s.deadline),
+    };
+    const confirmed = await executeTransaction("Write EIP-712 appraisal", () => registryWrite.updateAppraisal(appraisal, latestProof.signature));
+    if (!confirmed) return;
+    latestProof = null;
+    $("publish-appraisal-button").disabled = true;
+    $("proof-action-status").textContent = "Appraisal update confirmed by BNB Testnet.";
+  } catch (error) {
+    $("proof-action-status").textContent = `Appraisal write failed: ${shortError(error)}`;
+  }
+}
+
+async function requestTestTokens() {
+  if (!tokenWrite) return;
+  await executeTransaction("Get 1,000 MockUSDT", () => tokenWrite.faucet(userWallet, ethers.parseUnits("1000", 18)));
+}
+
+async function buyWithUSDT() {
+  if (!vaultWrite || !liveProperty) return;
+  try {
+    const fractions = readFractionAmount();
+    const cost = fractions * liveProperty.pricePerFraction / 10n ** 18n;
+    if (cost === 0n) throw new Error("Fraction amount is below the supported payment precision.");
+    const allowance = await tokenRead.allowance(userWallet, deployment.contracts.vault);
+    if (allowance < cost) {
+      const approved = await executeTransaction("Approve MockUSDT", () => tokenWrite.approve(deployment.contracts.vault, cost));
+      if (!approved) return;
+    }
+    await executeTransaction("Buy fractions with MockUSDT", () => vaultWrite.buyWithUSDT(fractions));
+  } catch (error) {
+    showLiveError(`USDT purchase failed: ${shortError(error)}`);
+  }
+}
+
+async function buyWithBNB() {
+  if (!vaultWrite || !liveProperty) return;
+  try {
+    const fractions = readFractionAmount();
+    const costUsd = fractions * liveProperty.pricePerFraction / 10n ** 18n;
+    const bnbPrice = await vaultRead.bnbPriceUSD();
+    const costBnb = costUsd * 10n ** 18n / bnbPrice;
+    if (costUsd === 0n || costBnb === 0n) throw new Error("Fraction amount is below the supported payment precision.");
+    await executeTransaction("Buy fractions with tBNB", () => vaultWrite.buyWithBNB(fractions, { value: costBnb }));
+  } catch (error) {
+    showLiveError(`tBNB purchase failed: ${shortError(error)}`);
+  }
+}
+
+async function finalizeFunding() {
+  if (!vaultWrite) return;
+  await executeTransaction("Finalize funding round", () => vaultWrite.finalizeFunding());
+}
+
+async function depositTestYield() {
+  if (!vaultWrite || !tokenWrite) return;
+  try {
+    const amount = ethers.parseUnits($("yield-amount").value, 18);
+    if (amount <= 0n) throw new Error("Enter a yield amount above zero.");
+    const allowance = await tokenRead.allowance(userWallet, deployment.contracts.vault);
+    if (allowance < amount) {
+      const approved = await executeTransaction("Approve MockUSDT yield", () => tokenWrite.approve(deployment.contracts.vault, amount));
+      if (!approved) return;
+    }
+    await executeTransaction("Deposit illustrative USDT yield", () => vaultWrite.depositRentalYield(amount));
+  } catch (error) {
+    showLiveError(`Yield deposit failed: ${shortError(error)}`);
+  }
+}
+
+async function depositBnbYield() {
+  if (!vaultWrite) return;
+  await executeTransaction("Deposit 0.001 tBNB yield", () => vaultWrite.depositRentalYieldBNB({ value: ethers.parseEther("0.001") }));
+}
+
+async function claimUsdtYield() {
+  if (!vaultWrite) return;
+  await executeTransaction("Claim MockUSDT yield", () => vaultWrite.claimRentalYield());
+}
+
+async function claimBnbYield() {
+  if (!vaultWrite) return;
+  await executeTransaction("Claim tBNB yield", () => vaultWrite.claimRentalYieldBNB());
+}
+
+async function executeTransaction(label, sendTransaction) {
+  if (!walletSigner || transactionPending) return false;
+  transactionPending = true;
+  setWalletControls(Boolean(walletSigner));
+  $("live-state-note").textContent = `${label}: waiting for wallet confirmation.`;
+  try {
+    const tx = await sendTransaction();
+    const row = addTransactionRow(label, tx.hash, "tx-pending", "Submitted · waiting for BNB Testnet");
+    $("live-state-note").textContent = `${label}: submitted to BNB Testnet.`;
+    const receipt = await tx.wait();
+    if (receipt.status !== 1) throw new Error("Transaction reverted on-chain.");
+    row.className = "tx-entry tx-confirmed";
+    row.querySelector("span").textContent = `Confirmed in block ${receipt.blockNumber} · ${label}`;
+    $("live-state-note").textContent = `${label}: confirmed in block ${receipt.blockNumber}.`;
+    transactionPending = false;
+    setWalletControls(Boolean(walletSigner));
+    await loadLiveState();
+    return true;
+  } catch (error) {
+    const message = shortError(error);
+    const txHash = error?.transactionHash || error?.receipt?.hash;
+    if (txHash) addTransactionRow(`${label} · reverted`, txHash, "tx-error", "Transaction reverted · inspect receipt");
+    showLiveError(`${label}: ${message}`);
+    return false;
+  } finally {
+    transactionPending = false;
+    setWalletControls(Boolean(walletSigner));
+  }
+}
+
+function addTransactionRow(label, hash, className, message) {
+  const log = $("live-activity");
+  const placeholder = log.querySelector(":scope > span");
+  if (placeholder) placeholder.remove();
+  const row = document.createElement("div");
+  row.className = `tx-entry ${className}`;
+  const text = document.createElement("span");
+  text.textContent = message || label;
+  const link = document.createElement("a");
+  link.href = `${deployment.explorerUrl}/tx/${hash}`;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.textContent = "View transaction ↗";
+  row.append(text, link);
+  log.prepend(row);
+  return row;
+}
+
+function setWalletControls(connected) {
+  const blocked = !connected || transactionPending;
+  if (blocked) {
+    for (const id of ["faucet-button", "buy-usdt-button", "buy-bnb-button", "deposit-yield-button", "deposit-bnb-yield-button", "finalize-button", "claim-usdt-button", "claim-bnb-button", "publish-appraisal-button"]) {
+      $(id).disabled = true;
+    }
+    return;
+  }
+  for (const id of ["faucet-button", "buy-usdt-button", "buy-bnb-button", "deposit-yield-button", "deposit-bnb-yield-button"]) $(id).disabled = false;
+}
+
+function showWalletNotice(message, kind = "info") {
+  const notice = $("wallet-notice");
+  notice.className = `wallet-notice ${kind}`;
+  $("wallet-notice-text").textContent = message;
+  notice.hidden = false;
+}
+
+function clearWalletConnection(message) {
+  walletProvider = undefined;
+  walletSigner = undefined;
+  userWallet = null;
+  registryWrite = undefined;
+  vaultWrite = undefined;
+  tokenWrite = undefined;
+  const button = $("wallet-btn");
+  button.textContent = "Connect wallet";
+  setWalletControls(false);
+  setNetworkStatus("WALLET NOT CONNECTED", true);
+  showWalletNotice(message, "error");
+  refreshProofAction();
+}
+
+function refreshProofAction() {
+  const ready = Boolean(latestProof && walletSigner && appraiserAddress
+    && proofTargetsDeployedProperty(latestProof, latestProofPropertyId)
+    && latestProof.appraiser_agent?.toLowerCase() === appraiserAddress.toLowerCase());
+  $("publish-appraisal-button").disabled = !ready;
+  if (latestProof && proofTargetsDeployedProperty(latestProof, latestProofPropertyId)) {
+    $("proof-action-status").textContent = !appraiserAddress
+      ? "Reading the appraiser address from the registry…"
+      : latestProof.appraiser_agent?.toLowerCase() !== appraiserAddress.toLowerCase()
+        ? "The agent signer does not match the registry’s configured appraiser; this proof cannot be submitted."
+        : walletSigner
+          ? "Proof matches the registry appraiser and is ready for wallet submission."
+          : "Connect a BSC Testnet wallet to submit this appraisal.";
+  }
+}
+
+function proofTargetsDeployedProperty(proof, propertyId) {
+  return Boolean(proof && propertyId?.toLowerCase() === deployment.propertyId.toLowerCase()
+    && proof.chain_id === deployment.chainId
+    && proof.verifying_contract?.toLowerCase() === deployment.contracts.registry.toLowerCase());
+}
+
+function readFractionAmount() {
+  const value = $("fraction-amount").value;
+  if (!value || Number(value) <= 0) throw new Error("Enter a fraction amount above zero.");
+  return ethers.parseUnits(value, 18);
+}
+
+function showLiveError(message) {
+  $("live-state-note").textContent = message;
+  const row = document.createElement("div");
+  row.className = "tx-entry tx-error";
+  row.textContent = message;
+  const log = $("live-activity");
+  const placeholder = log.querySelector(":scope > span");
+  if (placeholder) placeholder.remove();
+  log.prepend(row);
+}
+
+function districtFor(city) { return { Bali: "Canggu", Jakarta: "SCBD", Yogyakarta: "Malioboro", Bandung: "Dago" }[city] || "Canggu"; }
+function money(value) { return `$${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`; }
+function formatUnits(value) { return Number(ethers.formatUnits(value, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 }); }
+function shortError(error) { return error?.shortMessage || error?.reason || error?.message || "Request failed."; }
+function setNetworkStatus(value, isError = false) { $("network-status").textContent = value; $("network-status").classList.toggle("error", isError); }
+async function fetchWithTimeout(url, options, timeout) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeout);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  finally { window.clearTimeout(timer); }
 }

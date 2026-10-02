@@ -15,25 +15,25 @@ contract KavlingRegistry is Ownable, EIP712 {
 
     struct Appraisal {
         bytes32 propertyId;
-        uint256 valuationUSD;     // 18 decimals, total appraisal in USD
+        uint256 valuationUSD; // 18 decimals, total appraisal in USD
         uint256 pricePerFraction; // 18 decimals, price per fractional token
-        uint256 annualYieldBps;   // 100 bps = 1.00% expected APY (e.g. 850 = 8.50%)
-        uint256 timestamp;        // Monotonic appraisal issuance timestamp
-        uint256 nonce;            // Sequential nonce preventing replay attacks
-        uint256 deadline;         // Unix timestamp expiry
+        uint256 annualYieldBps; // 100 bps = 1.00% expected APY (e.g. 850 = 8.50%)
+        uint256 timestamp; // Monotonic appraisal issuance timestamp
+        uint256 nonce; // Sequential nonce preventing replay attacks
+        uint256 deadline; // Unix timestamp expiry
     }
 
     struct Property {
         bytes32 propertyId;
-        string name;              // e.g. "Villa Canggu Sanctuary"
-        string city;              // e.g. "Bali", "Jakarta", "Yogyakarta"
-        string legalDeedHash;     // SHM / HGB land title certificate hash
-        string ipfsMetadata;      // IPFS URI containing images, comps, and structural audit
-        uint256 totalFractions;   // Total fractional tokens issued
+        string name; // e.g. "Villa Canggu Sanctuary"
+        string city; // e.g. "Bali", "Jakarta", "Yogyakarta"
+        string legalDeedHash; // SHM / HGB land title certificate hash
+        string ipfsMetadata; // IPFS URI containing images, comps, and structural audit
+        uint256 totalFractions; // Total fractional tokens issued
         uint256 valuationUSD;
         uint256 pricePerFraction;
         uint256 annualYieldBps;
-        address vaultAddress;     // Deployed KavlingPropertyVault
+        address vaultAddress; // Deployed KavlingPropertyVault
         bool isActive;
     }
 
@@ -82,13 +82,10 @@ contract KavlingRegistry is Ownable, EIP712 {
     error Unauthorized();
     error InvestorNotVerified();
 
-    constructor(address _aiAppraiserAgent) 
-        Ownable(msg.sender) 
-        EIP712("KavlingRegistry", "1.0.0") 
-    {
+    constructor(address _aiAppraiserAgent) Ownable(msg.sender) EIP712("KavlingRegistry", "1.0.0") {
         require(_aiAppraiserAgent != address(0), "Invalid agent address");
         aiAppraiserAgent = _aiAppraiserAgent;
-        complianceEnforced = false; // Permissive by default for hackathon usability
+        complianceEnforced = false; // Deployments should enable this only with a real verification process.
     }
 
     function setAIAppraiser(address _newAgent) external onlyOwner {
@@ -119,12 +116,12 @@ contract KavlingRegistry is Ownable, EIP712 {
         return isInvestorVerified[investor];
     }
 
-    function _verifyAppraisalSignature(
-        Appraisal calldata appraisal,
-        bytes calldata signature
-    ) internal view {
+    function _verifyAppraisalSignature(Appraisal calldata appraisal, bytes calldata signature) internal view {
         if (block.timestamp > appraisal.deadline) revert SignatureExpired();
-        if (appraisal.timestamp <= lastAppraisalTimestamp[appraisal.propertyId] && lastAppraisalTimestamp[appraisal.propertyId] != 0) {
+        if (
+            appraisal.timestamp <= lastAppraisalTimestamp[appraisal.propertyId]
+                && lastAppraisalTimestamp[appraisal.propertyId] != 0
+        ) {
             revert StaleAppraisal();
         }
         if (appraisal.nonce != propertyNonces[appraisal.propertyId] + 1) revert InvalidNonce();
@@ -211,10 +208,7 @@ contract KavlingRegistry is Ownable, EIP712 {
     /**
      * @notice Updates valuation when AI Agent re-appraises based on market comps.
      */
-    function updateAppraisal(
-        Appraisal calldata appraisal,
-        bytes calldata signature
-    ) external {
+    function updateAppraisal(Appraisal calldata appraisal, bytes calldata signature) external {
         if (properties[appraisal.propertyId].valuationUSD == 0) revert PropertyNotFound();
 
         _verifyAppraisalSignature(appraisal, signature);

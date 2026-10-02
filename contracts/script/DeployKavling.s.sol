@@ -8,8 +8,10 @@ import "../src/MockUSDT.sol";
 
 contract DeployKavlingScript is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envOr("PRIVATE_KEY", uint256(0xA11CE));
-        address aiAppraiser = vm.envOr("AI_APPRAISER_ADDRESS", vm.addr(deployerPrivateKey));
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        uint256 aiAppraiserPrivateKey = vm.envOr("AI_APPRAISER_PRIVATE_KEY", deployerPrivateKey);
+        address aiAppraiser = vm.envOr("AI_APPRAISER_ADDRESS", vm.addr(aiAppraiserPrivateKey));
+        require(vm.addr(aiAppraiserPrivateKey) == aiAppraiser, "AI signer key does not match AI_APPRAISER_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -23,12 +25,12 @@ contract DeployKavlingScript is Script {
 
         // 3. Register Flagship Property: Canggu Sanctuary Villa
         bytes32 propertyId = keccak256("BALI-CANGGU-VILLA-01");
-        
+
         KavlingRegistry.Appraisal memory appraisal = KavlingRegistry.Appraisal({
             propertyId: propertyId,
-            valuationUSD: 750_000 * 1e18,     // $750k USD
-            pricePerFraction: 50 * 1e18,       // $50 per fraction
-            annualYieldBps: 980,               // 9.80% APY
+            valuationUSD: 750_000 * 1e18, // $750k USD
+            pricePerFraction: 50 * 1e18, // $50 per fraction
+            annualYieldBps: 980, // 9.80% APY
             timestamp: block.timestamp,
             nonce: 1,
             deadline: block.timestamp + 365 days
@@ -59,7 +61,7 @@ contract DeployKavlingScript is Script {
         );
 
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(deployerPrivateKey, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aiAppraiserPrivateKey, digest);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         registry.registerPropertyWithAppraisal(
@@ -82,7 +84,7 @@ contract DeployKavlingScript is Script {
             address(usdt),
             15_000 * 1e18,
             300_000 * 1e18, // $300,000 Soft-Cap
-            30              // 30 days
+            30 // 30 days
         );
         console.log("KavlingPropertyVault (Canggu) deployed to:", address(vault));
 

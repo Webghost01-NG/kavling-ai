@@ -4,7 +4,7 @@ from kavling.server import app
 client = TestClient(app)
 
 def test_root_endpoint():
-    response = client.get("/")
+    response = client.get("/api/info")
     assert response.status_code == 200
     data = response.json()
     assert data["protocol"] == "Kavling AI"
@@ -36,7 +36,8 @@ def test_appraise_endpoint():
         "zoning": "Pariwisata",
         "title": "SHM",
         "total_fractions": 15000,
-        "nonce": 1
+        "nonce": 1,
+        "verifying_contract": "0x1234567890123456789012345678901234567890"
     }
     response = client.post("/api/appraise", json=payload)
     assert response.status_code == 200
@@ -45,6 +46,36 @@ def test_appraise_endpoint():
     assert "appraisal" in data
     assert "eip712_proof" in data
     assert data["eip712_proof"]["signature"].startswith("0x")
+
+def test_appraise_assigns_sequential_nonce_not_client_nonce():
+    property_id = "0x" + "ab" * 32
+    payload = {
+        "property_id": property_id,
+        "city": "Bali",
+        "district": "Canggu",
+        "land_area_m2": 500,
+        "building_area_m2": 350,
+        "nonce": 999999999,
+    }
+
+    first = client.post("/api/appraise", json=payload)
+    second = client.post("/api/appraise", json=payload)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["eip712_proof"]["nonce"] == 1
+    assert second.json()["eip712_proof"]["nonce"] == 2
+
+def test_appraise_rejects_unconfigured_chain():
+    response = client.post("/api/appraise", json={"chain_id": 56})
+    assert response.status_code == 400
+
+def test_appraise_rejects_unconfigured_registry():
+    response = client.post(
+        "/api/appraise",
+        json={"verifying_contract": "0x0000000000000000000000000000000000000001"},
+    )
+    assert response.status_code == 400
 
 def test_telemetry_endpoint():
     response = client.get("/api/oracle/telemetry")
@@ -61,4 +92,5 @@ def test_compliance_verify():
     }
     response = client.post("/api/compliance/verify", json=payload)
     assert response.status_code == 200
-    assert response.json()["verified"] is True
+    assert response.json()["verified"] is False
+    assert response.json()["status"] == "address_format_only"
