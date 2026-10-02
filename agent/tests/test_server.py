@@ -47,6 +47,36 @@ def test_appraise_endpoint():
     assert "eip712_proof" in data
     assert data["eip712_proof"]["signature"].startswith("0x")
 
+def test_appraise_assigns_sequential_nonce_not_client_nonce():
+    property_id = "0x" + "ab" * 32
+    payload = {
+        "property_id": property_id,
+        "city": "Bali",
+        "district": "Canggu",
+        "land_area_m2": 500,
+        "building_area_m2": 350,
+        "nonce": 999999999,
+    }
+
+    first = client.post("/api/appraise", json=payload)
+    second = client.post("/api/appraise", json=payload)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["eip712_proof"]["nonce"] == 1
+    assert second.json()["eip712_proof"]["nonce"] == 2
+
+def test_appraise_rejects_unconfigured_chain():
+    response = client.post("/api/appraise", json={"chain_id": 56})
+    assert response.status_code == 400
+
+def test_appraise_rejects_unconfigured_registry():
+    response = client.post(
+        "/api/appraise",
+        json={"verifying_contract": "0x0000000000000000000000000000000000000001"},
+    )
+    assert response.status_code == 400
+
 def test_telemetry_endpoint():
     response = client.get("/api/oracle/telemetry")
     assert response.status_code == 200

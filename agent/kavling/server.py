@@ -32,7 +32,7 @@ app.add_middleware(
 )
 
 class AppraisalRequest(BaseModel):
-    property_id: str = Field(default="0x4b41564c494e472d42414c492d30310000000000000000000000000000000000")
+    property_id: str = Field(default="0x7f15bab648762b3f2ec1c5f3811c9968c66c15e9e0848513e95d6e726e8714e2")
     city: str = Field(default="Bali")
     district: str = Field(default="Canggu")
     land_area_m2: float = Field(default=500.0, gt=0, le=100_000)
@@ -45,7 +45,6 @@ class AppraisalRequest(BaseModel):
     distance_to_coast_km: float = Field(default=1.2)
     structural_audit_grade: str = Field(default="A")
     total_fractions: int = Field(default=15_000, gt=0, le=10**18)
-    nonce: int = Field(default=1, gt=0)
     chain_id: Optional[int] = None
     verifying_contract: Optional[str] = None
 
@@ -78,7 +77,7 @@ def _agent_account() -> Account:
 # Pre-seeded Indonesian Curated Properties
 SAMPLE_PROPERTIES = [
     {
-        "propertyId": "0x4b41564c494e472d42414c492d30310000000000000000000000000000000000",
+        "propertyId": "0x7f15bab648762b3f2ec1c5f3811c9968c66c15e9e0848513e95d6e726e8714e2",
         "name": "Canggu Sanctuary Eco-Villa",
         "city": "Bali",
         "district": "Canggu",
@@ -92,7 +91,7 @@ SAMPLE_PROPERTIES = [
         "pricePerFractionUSD": 50.00,
         "expectedYieldPercent": 9.80,
         "minFundingGoalUSD": 300000,
-        "vaultState": "Active",
+        "vaultState": "Funding · testnet demo",
         "seismicResilience": 95.2,
         "image": "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1000&q=80"
     },
@@ -170,13 +169,16 @@ def appraise_property(req: AppraisalRequest):
     Computes mathematical valuation and signs EIP-712 appraisal with nonce replay prevention.
     """
     try:
-        with _nonce_lock:
-            previous_nonce = _last_seen_nonces.get(req.property_id, 0)
-            if req.nonce <= previous_nonce:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"nonce must be greater than the last accepted nonce ({previous_nonce})"
-                )
+        if req.chain_id is not None and req.chain_id != settings.CHAIN_ID:
+            raise HTTPException(status_code=400, detail="Requested chain does not match the configured chain")
+
+        verifying_contract = settings.REGISTRY_ADDRESS or req.verifying_contract
+        if not verifying_contract:
+            raise HTTPException(status_code=503, detail="REGISTRY_ADDRESS is not configured")
+        if req.verifying_contract and Web3.to_checksum_address(req.verifying_contract) != Web3.to_checksum_address(
+            verifying_contract
+        ):
+            raise HTTPException(status_code=400, detail="Requested registry does not match the configured registry")
 
         appraisal_result = calculate_appraisal(
             property_id_hex=req.property_id,
@@ -194,18 +196,35 @@ def appraise_property(req: AppraisalRequest):
             total_fractions=req.total_fractions
         )
 
-        signed_proof = sign_appraisal(
-            property_id_hex=req.property_id,
-            valuation_usd_wei=int(appraisal_result["on_chain"]["valuationUSD"]),
-            price_per_fraction_wei=int(appraisal_result["on_chain"]["pricePerFraction"]),
-            annual_yield_bps=appraisal_result["annual_yield_bps"],
-            nonce=req.nonce,
-            chain_id=req.chain_id or settings.CHAIN_ID,
-            verifying_contract=req.verifying_contract or settings.REGISTRY_ADDRESS
-        )
-
         with _nonce_lock:
-            _last_seen_nonces[req.property_id] = req.nonce
+            next_nonce = _last_seen_nonces.get(req.property_id, 0) + 1
+            provider = Web3(Web3.HTTPProvider(settings.RPC_URL, request_kwargs={"timeout": 4}))
+            if provider.is_connected():
+                registry_address = Web3.to_checksum_address(verifying_contract)
+                if provider.eth.get_code(registry_address):
+                    registry = provider.eth.contract(
+                        address=registry_address,
+                        abi=[{
+                            "inputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
+                            "name": "propertyNonces",
+                            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                            "stateMutability": "view",
+                            "type": "function",
+                        }],
+                    )
+                    property_id_bytes = bytes.fromhex(req.property_id[2:])
+                    next_nonce = registry.functions.propertyNonces(property_id_bytes).call() + 1
+
+            signed_proof = sign_appraisal(
+                property_id_hex=req.property_id,
+                valuation_usd_wei=int(appraisal_result["on_chain"]["valuationUSD"]),
+                price_per_fraction_wei=int(appraisal_result["on_chain"]["pricePerFraction"]),
+                annual_yield_bps=appraisal_result["annual_yield_bps"],
+                nonce=next_nonce,
+                chain_id=settings.CHAIN_ID,
+                verifying_contract=verifying_contract,
+            )
+            _last_seen_nonces[req.property_id] = next_nonce
 
         return {
             "success": True,

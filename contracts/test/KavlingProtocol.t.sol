@@ -293,6 +293,14 @@ contract KavlingProtocolTest is Test {
         // Advance time past 7-day deadline
         vm.warp(block.timestamp + 8 days);
 
+        vm.expectRevert(KavlingPropertyVault.FundingPeriodEnded.selector);
+        vm.prank(investor1);
+        escrowVault.buyWithUSDT(1 * 1e18);
+
+        vm.expectRevert(KavlingPropertyVault.FundingPeriodEnded.selector);
+        vm.prank(investor2);
+        escrowVault.buyWithBNB{value: 1 ether}(1 * 1e18);
+
         // Enable refunds
         escrowVault.enableRefunds();
         assertTrue(escrowVault.state() == KavlingPropertyVault.VaultState.Refundable);
@@ -414,6 +422,38 @@ contract KavlingProtocolTest is Test {
         vm.prank(investor2);
         vault.claimRentalYield();
         assertEq(usdt.balanceOf(investor2) - inv2USDTBefore, 200 * 1e18);
+    }
+
+    function test_SelfTransferDoesNotDuplicatePendingYield() public {
+        _setupPropertyAndVault();
+
+        vm.startPrank(investor1);
+        usdt.approve(address(vault), type(uint256).max);
+        vault.buyWithUSDT(100 * 1e18);
+        vm.stopPrank();
+
+        usdt.faucet(admin, 1_000 * 1e18);
+        vm.startPrank(admin);
+        usdt.approve(address(vault), 1_000 * 1e18);
+        vault.depositRentalYield(1_000 * 1e18);
+        vault.depositRentalYieldBNB{value: 1 ether}();
+        vm.stopPrank();
+
+        vm.prank(investor1);
+        vault.transfer(investor1, 1 * 1e18);
+
+        assertEq(vault.calculateClaimableYield(investor1), 1_000 * 1e18);
+        assertEq(vault.calculateClaimableYieldBNB(investor1), 1 ether);
+
+        uint256 usdtBefore = usdt.balanceOf(investor1);
+        vm.prank(investor1);
+        vault.claimRentalYield();
+        assertEq(usdt.balanceOf(investor1) - usdtBefore, 1_000 * 1e18);
+
+        uint256 bnbBefore = investor1.balance;
+        vm.prank(investor1);
+        vault.claimRentalYieldBNB();
+        assertEq(investor1.balance - bnbBefore, 1 ether);
     }
 
     function test_DualCurrencyYield_DepositAndClaimBNB() public {

@@ -79,6 +79,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
     error RefundFailed();
     error NoDepositToRefund();
     error TransfersDisabledDuringFunding();
+    error FundingPeriodEnded();
 
     constructor(
         string memory name,
@@ -131,6 +132,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
         if (fractionAmount < MIN_PURCHASE_FRACTION) revert BelowMinPurchase();
         if (totalFractionsMinted + fractionAmount > maxFractions) revert MaxSupplyExceeded();
         if (state == VaultState.Refundable) revert VaultNotActive();
+        if (state == VaultState.Funding && block.timestamp > fundingDeadline) revert FundingPeriodEnded();
 
         KavlingRegistry.Property memory prop = registry.getProperty(propertyId);
         if (!prop.isActive) revert VaultNotActive();
@@ -163,6 +165,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
         if (fractionAmount < MIN_PURCHASE_FRACTION) revert BelowMinPurchase();
         if (totalFractionsMinted + fractionAmount > maxFractions) revert MaxSupplyExceeded();
         if (state == VaultState.Refundable) revert VaultNotActive();
+        if (state == VaultState.Funding && block.timestamp > fundingDeadline) revert FundingPeriodEnded();
 
         KavlingRegistry.Property memory prop = registry.getProperty(propertyId);
         if (!prop.isActive) revert VaultNotActive();
@@ -377,7 +380,7 @@ contract KavlingPropertyVault is ERC20, Ownable, ReentrancyGuard, Pausable {
             }
         }
 
-        if (to != address(0)) {
+        if (to != address(0) && to != from) {
             uint256 toAccumulated = (balanceOf(to) * accYieldPerShare) / PRECISION;
             if (toAccumulated >= rewardDebt[to]) {
                 pendingYield[to] += toAccumulated - rewardDebt[to];

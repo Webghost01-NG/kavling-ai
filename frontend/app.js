@@ -60,7 +60,7 @@ async function handleAppraisalSubmit(event) {
   button.disabled = true;
   button.firstChild.textContent = "Calculating... ";
   try {
-    const response = await fetchWithTimeout(`${API_URL}/api/appraise`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ city: params.city, district: districtFor(params.city), land_area_m2: params.land, building_area_m2: params.building, zoning: params.zoning, title: params.title, nonce: Date.now() }) }, 3500);
+    const response = await fetchWithTimeout(`${API_URL}/api/appraise`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ city: params.city, district: districtFor(params.city), land_area_m2: params.land, building_area_m2: params.building, zoning: params.zoning, title: params.title }) }, 3500);
     if (!response.ok) throw new Error(`agent returned ${response.status}`);
     const data = await response.json();
     displayAppraisal(data.appraisal, data.eip712_proof, "Agent API · signed proof returned");
