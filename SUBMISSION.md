@@ -73,7 +73,7 @@ https://github.com/Webghost01-NG/kavling-ai
 
 https://kavling-ai.vercel.app
 
-Canonical production branch: `main`. The public frontend is live at the URL above. Hosted signing remains **PENDING**; the Render Blueprint is configured in the repository, but there is no provisioned service URL yet. Production currently displays an explicitly unsigned local estimate.
+Canonical production branch: `main`. The public frontend is live at the URL above; the post-merge production deployment was verified from main commit `7f20e97`. Hosted signing remains **PENDING**; the Render Blueprint is configured in the repository, but there is no provisioned service URL yet. Production currently displays an explicitly unsigned local estimate.
 
 Hosted agent URL: PENDING
 
