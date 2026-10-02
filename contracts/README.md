@@ -1,17 +1,6 @@
-## Foundry
+## Kavling AI Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
+Foundry-based Solidity contracts, tests, and the BNB Smart Chain Testnet deployment script.
 
 ## Kavling deployment
 
@@ -32,7 +21,7 @@ Fund a dedicated wallet with test BNB. Never use a mainnet key and never commit 
 
 ```shell
 export DEPLOYER_PRIVATE_KEY=0x...
-export RPC_URL=https://data-seed-prebsc-1-s1.binance.org:8545/
+export RPC_URL=https://bsc-testnet-dataseed.bnbchain.org
 export CHAIN_ID=97
 ```
 
@@ -56,56 +45,11 @@ After broadcasting, record the printed MockUSDT, registry, and vault addresses i
 
 `MockUSDT` is a faucet token for testnet/local testing only. It is not real USDT and has no redemption value.
 
-## Usage
-
-### Build
+## Build and test
 
 ```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+forge build
+forge test -vvv
 ```
 
 ## Deployed BNB Smart Chain Testnet instance
