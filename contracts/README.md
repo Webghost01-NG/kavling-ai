@@ -107,3 +107,7 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+## Deployed BNB Smart Chain Testnet instance
+
+The current demo deployment is recorded in the root [DEPLOYMENT.md](../DEPLOYMENT.md), including receipt hashes, constructor arguments, Sourcify verification, and smoke-test evidence. These addresses are for chain ID 97 only; do not use them as mainnet contracts.

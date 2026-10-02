@@ -91,7 +91,7 @@ SAMPLE_PROPERTIES = [
         "pricePerFractionUSD": 50.00,
         "expectedYieldPercent": 9.80,
         "minFundingGoalUSD": 300000,
-        "vaultState": "Funding · testnet demo",
+        "vaultState": "Active · testnet demo",
         "seismicResilience": 95.2,
         "image": "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1000&q=80"
     },
